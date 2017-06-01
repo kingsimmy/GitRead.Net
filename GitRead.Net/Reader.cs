@@ -16,6 +16,18 @@ namespace GitRead.Net
             this.repoPath = repoPath;
         }
 
+        public string ReadHead()
+        {
+            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "HEAD"));
+            return lines[0];
+        }
+
+        public string GetBranch(string refPath)
+        {
+            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "refs", "heads", "master"));
+            return lines[0];
+        }
+
         public string ReadLooseFile(string hash)
         {
             string folderName = hash.Substring(0, 2);

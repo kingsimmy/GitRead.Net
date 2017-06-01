@@ -6,10 +6,12 @@
 
   <ItemGroup>
     <None Remove="Repos\TestRepo01.zip" />
+    <None Remove="Repos\TestRepo02.zip" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Repos\TestRepo01.zip" />
+    <EmbeddedResource Include="Repos\TestRepo02.zip" />
   </ItemGroup>
 
   <ItemGroup>
