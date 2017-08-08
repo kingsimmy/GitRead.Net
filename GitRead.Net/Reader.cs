@@ -3,6 +3,8 @@ using System.IO;
 using System.IO.Compression;
 using GitRead.Net.Data;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GitRead.Net
 {
@@ -10,7 +12,7 @@ namespace GitRead.Net
     {
         private const int whiteSpace = ' ';
         private const int nullChar = '\0';
-
+        private readonly byte[] oneByteBuffer = new byte[1];
         private readonly string repoPath;
 
         public Reader(string repoPath)
@@ -52,6 +54,33 @@ namespace GitRead.Net
             }
         }
 
+        public IReadOnlyList<TreeEntry> ReadTree(string hash)
+        {
+            List<TreeEntry> entries = new List<TreeEntry>();
+            using (FileStream fileStream = OpenStreamForDeflate(hash))
+            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            {
+                string gitFileType = ReadString(deflateStream, whiteSpace);
+                if (gitFileType.ToString() != "tree")
+                {
+                    throw new Exception("Invalid tree object");
+                }
+                string gitFileSize = ReadString(deflateStream, nullChar);
+                int length = int.Parse(gitFileSize);
+                while (length > 0)
+                {
+                    string mode = ReadString(deflateStream, whiteSpace);
+                    string name = ReadString(deflateStream, nullChar);
+                    byte[] buffer = new byte[20];
+                    deflateStream.Read(buffer, 0, 20);
+                    string itemHash = String.Concat(buffer.Select(x => x.ToString("X2")));
+                    length -= (mode.Length + 1 + name.Length + 1 + itemHash.Length);
+                    entries.Add(new TreeEntry(name, itemHash, mode));
+                }
+            }
+            return entries;
+        }
+
         public Commit ReadCommit(string hash)
         {
             using (FileStream fileStream = OpenStreamForDeflate(hash))
@@ -87,6 +116,21 @@ namespace GitRead.Net
                 string author = authorLine.Substring(7);
                 return new Commit(tree, null, author);
             }
+        }
+
+        private string ReadString(Stream stream, int delimiter)
+        {
+            StringBuilder builder = new StringBuilder();
+            char ch = char.MaxValue;
+            stream.Read(oneByteBuffer, 0, 1);
+            ch = Encoding.UTF8.GetChars(oneByteBuffer)[0];
+            while (ch != delimiter)
+            {
+                builder.Append(ch);
+                stream.Read(oneByteBuffer, 0, 1);
+                ch = Encoding.UTF8.GetChars(oneByteBuffer)[0];
+            } while (ch != delimiter);
+            return builder.ToString();
         }
 
         private FileStream OpenStreamForDeflate(string hash)
