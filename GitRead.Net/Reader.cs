@@ -24,7 +24,7 @@ namespace GitRead.Net
 
         public string GetBranch(string refPath)
         {
-            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "refs", "heads", "master"));
+            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "refs", "heads", refPath));
             return lines[0];
         }
 

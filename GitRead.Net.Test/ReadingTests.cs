@@ -24,7 +24,7 @@ namespace GitRead.Net.Test
             string repoName = "TestRepo02";
             string repoDir = ExtractZippedRepo(repoName);
             Reader reader = new Reader(repoDir);
-            string hash = reader.GetBranch("");
+            string hash = reader.GetBranch("master");
             string res = reader.ReadLooseFile(hash);
             Assert.True(res.StartsWith("tree"));
         }
