@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using GitRead.Net.Data;
+using NUnit.Framework;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
@@ -25,8 +26,8 @@ namespace GitRead.Net.Test
             string repoDir = ExtractZippedRepo(repoName);
             Reader reader = new Reader(repoDir);
             string hash = reader.GetBranch("master");
-            string res = reader.ReadLooseFile(hash);
-            Assert.True(res.StartsWith("tree"));
+            Commit commit = reader.ReadCommit(hash);
+            Assert.AreEqual("ce2d3a85f185830a19e84d404155bf9847ede8b8", commit.Tree);
         }
 
         private string ExtractZippedRepo(string repoName)
