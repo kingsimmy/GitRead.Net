@@ -13,8 +13,7 @@ namespace GitRead.Net.Test
         [Test]
         public void TestOne()
         {
-            string repoName = "TestRepo01";
-            string repoDir = ExtractZippedRepo(repoName);
+            string repoDir = ExtractZippedRepo("TestRepo01");
             Reader reader = new Reader(repoDir);
             string res = reader.ReadLooseFile("d670460b4b4aece5915caf5c68d12f560a9fe3e4");
             Assert.AreEqual("test content\n", res);
@@ -23,8 +22,7 @@ namespace GitRead.Net.Test
         [Test]
         public void TestTwo()
         {
-            string repoName = "TestRepo02";
-            string repoDir = ExtractZippedRepo(repoName);
+            string repoDir = ExtractZippedRepo("TestRepo02");
             Reader reader = new Reader(repoDir);
             string hash = reader.GetBranch("master");
             Commit commit = reader.ReadCommit(hash);
