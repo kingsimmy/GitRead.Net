@@ -17,19 +17,33 @@ namespace GitRead.Net
 
         public Reader(string repoPath)
         {
-            this.repoPath = repoPath;
+            this.repoPath = repoPath.EndsWith(".git") ? repoPath : Path.Combine(repoPath, ".git");
         }
 
         public string ReadHead()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "HEAD"));
+            string[] lines = File.ReadAllLines(Path.Combine(repoPath, "HEAD"));
             return lines[0];
         }
 
-        public string GetBranch(string refPath)
+        public string GetBranch(string branchName)
         {
-            string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "refs", "heads", refPath));
-            return lines[0];
+            string refFilePath = Path.Combine(repoPath, "refs", "heads", branchName);
+            if (File.Exists(refFilePath))
+            {
+                string[] lines = File.ReadAllLines(refFilePath);
+                return lines[0];
+            }
+            string packedRefsFilePath = Path.Combine(repoPath, "packed-refs");
+            if (File.Exists(packedRefsFilePath))
+            {
+                return File.ReadAllLines(packedRefsFilePath)
+                    .Where(x => !x.StartsWith("#"))
+                    .Select(x => x.Split(' '))
+                    .Where(x => x[1].EndsWith(branchName))
+                    .First()[0];
+            }
+            throw new Exception($"Could not find file {refFilePath} or file {packedRefsFilePath}");
         }
 
         internal string ReadLooseFile(string hash)
@@ -137,7 +151,7 @@ namespace GitRead.Net
         {
             string folderName = hash.Substring(0, 2);
             string fileName = hash.Substring(2);
-            FileStream fileStream = File.OpenRead(Path.Combine(repoPath, ".git", "objects", folderName, fileName));
+            FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", folderName, fileName));
             fileStream.Seek(2, SeekOrigin.Begin);
             return fileStream;
         }

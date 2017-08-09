@@ -50,6 +50,15 @@ namespace GitRead.Net.Test
             Assert.AreEqual("abc xyz", res);
         }
 
+        [Test]
+        public void TestCsharplangReadPackedRef()
+        {
+            string repoDir = ExtractZippedRepo("csharplang.git");
+            Reader reader = new Reader(repoDir);
+            string res = reader.GetBranch("master");
+            Assert.AreEqual("411106b0108a37789ed3d53fd781acf8f75ef97b", res);
+        }
+
         private string ExtractZippedRepo(string repoName)
         {
             string repoDir = Path.GetTempPath() + repoName;
