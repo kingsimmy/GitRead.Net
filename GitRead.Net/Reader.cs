@@ -30,9 +30,9 @@ namespace GitRead.Net
         {
             string[] lines = File.ReadAllLines(Path.Combine(repoPath, ".git", "refs", "heads", refPath));
             return lines[0];
-        }        
+        }
 
-        public string ReadLooseFile(string hash)
+        internal string ReadLooseFile(string hash)
         {
             using (FileStream fileStream = OpenStreamForDeflate(hash))
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
@@ -54,7 +54,7 @@ namespace GitRead.Net
             }
         }
 
-        public IReadOnlyList<TreeEntry> ReadTree(string hash)
+        internal IReadOnlyList<TreeEntry> ReadTree(string hash)
         {
             List<TreeEntry> entries = new List<TreeEntry>();
             using (FileStream fileStream = OpenStreamForDeflate(hash))
@@ -81,7 +81,7 @@ namespace GitRead.Net
             return entries;
         }
 
-        public Commit ReadCommit(string hash)
+        internal Commit ReadCommit(string hash)
         {
             using (FileStream fileStream = OpenStreamForDeflate(hash))
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
