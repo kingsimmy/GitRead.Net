@@ -11,7 +11,7 @@ namespace GitRead.Net.Test
     public class ReadingTests
     {
         [Test]
-        public void TestOne()
+        public void Test01ReadLooseBlob()
         {
             string repoDir = ExtractZippedRepo("TestRepo01");
             Reader reader = new Reader(repoDir);
@@ -20,18 +20,34 @@ namespace GitRead.Net.Test
         }
 
         [Test]
-        public void TestTwo()
+        public void Test02ReadCommit()
         {
             string repoDir = ExtractZippedRepo("TestRepo02");
             Reader reader = new Reader(repoDir);
             string hash = reader.GetBranch("master");
             Commit commit = reader.ReadCommit(hash);
             StringAssert.AreEqualIgnoringCase("ce2d3a85f185830a19e84d404155bf9847ede8b8", commit.Tree);
-            IReadOnlyList<TreeEntry> res = reader.ReadTree(commit.Tree);
+        }
+
+        [Test]
+        public void Test02ReadTree()
+        {
+            string repoDir = ExtractZippedRepo("TestRepo02");
+            Reader reader = new Reader(repoDir);
+            IReadOnlyList<TreeEntry> res = reader.ReadTree("ce2d3a85f185830a19e84d404155bf9847ede8b8");
             Assert.AreEqual(res.Count, 1);
             StringAssert.AreEqualIgnoringCase("31d6d2184fe8deab8e52bd9581d67f35d4ecd5ca", res[0].Hash);
             Assert.AreEqual("mydocument.txt", res[0].Name);
             Assert.AreEqual(TreeEntryMode.RegularNonExecutableFile, res[0].Mode);
+        }
+
+        [Test]
+        public void Test02ReadLooseBlob()
+        {
+            string repoDir = ExtractZippedRepo("TestRepo02");
+            Reader reader = new Reader(repoDir);
+            string res = reader.ReadLooseFile("31d6d2184fe8deab8e52bd9581d67f35d4ecd5ca");
+            Assert.AreEqual("abc xyz", res);
         }
 
         private string ExtractZippedRepo(string repoName)
