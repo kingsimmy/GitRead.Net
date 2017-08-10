@@ -95,6 +95,95 @@ namespace GitRead.Net
             return entries;
         }
 
+        internal void ReadIndex(string name, string hash)
+        {
+            using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".idx")))
+            {
+                byte[] buffer = new byte[4];
+                fileStream.Read(buffer, 0, 4);
+                if(buffer[0] != 255 || buffer[1] != 116 || buffer[2] != 79 || buffer[3] != 99)
+                {
+                    throw new Exception("Invalid index file");
+                }
+                fileStream.Read(buffer, 0, 4);
+                if (buffer[0] != 0 || buffer[1] != 0 || buffer[2] != 0 || buffer[3] != 2)
+                {
+                    throw new Exception("Invalid index file version");
+                }
+                int fanoutIndex = Convert.ToInt32(hash.Substring(0, 2), 16); //Gives us a number between 0 and 255
+                int numberOfHashesToSkip;
+                if (fanoutIndex == 0)
+                {
+                    numberOfHashesToSkip = 0;
+                }
+                else
+                {
+                    fileStream.Seek((fanoutIndex - 1) * 4, SeekOrigin.Current);
+                    fileStream.Read(buffer, 0, 4);
+                    Array.Reverse(buffer);
+                    numberOfHashesToSkip = BitConverter.ToInt32(buffer, 0);
+                }
+                fileStream.Read(buffer, 0, 4);
+                Array.Reverse(buffer);
+                int endIndex = BitConverter.ToInt32(buffer, 0);
+                byte[] hashBytes = HexStringToBytes(hash);
+                int indexForHash = BinarySearch(fileStream, hashBytes, numberOfHashesToSkip, endIndex);
+            }
+        }
+
+        private byte[] HexStringToBytes(string str)
+        {
+            byte[] res = new byte[str.Length / 2];
+            for(int i = 0; i < res.Length; i++)
+            {
+                res[i] = Convert.ToByte(str.Substring(i * 2, 2), 16);
+            }
+            return res;
+        }
+
+        private int BinarySearch(FileStream fileStream, byte[] hash, int startIndex, int endIndex)
+        {
+            byte[] buffer = new byte[20];
+            int startOfHashes = 4 + 4 + (256 * 4);
+            int toCheck = (startIndex + endIndex + 1) / 2;
+            fileStream.Seek(startOfHashes + (toCheck * 20), SeekOrigin.Begin);
+            fileStream.Read(buffer, 0, 20);
+            string readHash = String.Concat(buffer.Select(x => x.ToString("X2")));
+            ComparisonResult comparison = Compare(hash, buffer);
+            if (comparison == ComparisonResult.Equal)
+            {
+                return toCheck;
+            }
+            if(startIndex == endIndex)
+            {
+                throw new Exception("Could not find hash");
+            }
+            if(comparison == ComparisonResult.Less)
+            {
+                return BinarySearch(fileStream, hash, startIndex, toCheck - 1);
+            }
+            else
+            {
+                return BinarySearch(fileStream, hash, toCheck + 1, endIndex);
+            }
+        }
+
+        private ComparisonResult Compare(byte[] a, byte[] b)
+        {
+            for(int i = 0; i < a.Length; i++)
+            {
+                if(a[i] < b[i])
+                {
+                    return ComparisonResult.Less;
+                }
+                if(a[i] > b[i])
+                {
+                    return ComparisonResult.Greater;
+                }
+            }
+            return ComparisonResult.Equal;
+        }
+
         internal Commit ReadCommit(string hash)
         {
             using (FileStream fileStream = OpenStreamForDeflate(hash))
@@ -154,6 +243,13 @@ namespace GitRead.Net
             FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", folderName, fileName));
             fileStream.Seek(2, SeekOrigin.Begin);
             return fileStream;
+        }
+
+        private enum ComparisonResult
+        {
+            Less,
+            Equal,
+            Greater
         }
     }
 }
