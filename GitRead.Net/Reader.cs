@@ -128,6 +128,11 @@ namespace GitRead.Net
                 int endIndex = BitConverter.ToInt32(buffer, 0);
                 byte[] hashBytes = HexStringToBytes(hash);
                 int indexForHash = BinarySearch(fileStream, hashBytes, numberOfHashesToSkip, endIndex);
+                int lastFanoutPos = 4 + 4 + (255 * 4);
+                fileStream.Seek(lastFanoutPos, SeekOrigin.Begin);
+                fileStream.Read(buffer, 0, 4);
+                Array.Reverse(buffer);
+                int totalNumberOfHashes = BitConverter.ToInt32(buffer, 0);
             }
         }
 
