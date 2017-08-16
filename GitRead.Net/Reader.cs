@@ -14,6 +14,7 @@ namespace GitRead.Net
         private const int nullChar = '\0';
         private readonly byte[] oneByteBuffer = new byte[1];
         private readonly byte[] fourByteBuffer = new byte[4];
+        private readonly byte[] eightByteBuffer = new byte[8];
         private readonly string repoPath;
 
         public Reader(string repoPath)
@@ -96,7 +97,31 @@ namespace GitRead.Net
             return entries;
         }
 
-        internal void ReadIndex(string name, string hash)
+        internal void ReadPackFile(string name, long offset)
+        {
+            /*  0 0 0   invalid: Reserved
+                0 0 1	COMMIT object
+                0 1 0	TREE object
+                0 1 1	BLOB object
+                1 0 0	TAG object
+                1 0 1	invalid: Reserved
+                1 1 0	DELTA_ENCODED object w/ offset to base
+                1 1 1	DELTA_ENCODED object w/ base BINARY_OBJ_ID */
+            using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".pack")))
+            {
+                List<byte> lengthBytes = new List<byte>();
+                fileStream.Seek(offset, SeekOrigin.Begin);
+                fileStream.Read(oneByteBuffer, 0, 1);
+                lengthBytes.Add(oneByteBuffer[0]);
+                while(oneByteBuffer[0] > 128)
+                {
+                    fileStream.Read(oneByteBuffer, 0, 1);
+                    lengthBytes.Add(oneByteBuffer[0]);
+                }
+            }
+        }
+
+        internal long ReadIndex(string name, string hash)
         {
             using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".idx")))
             {
@@ -129,6 +154,25 @@ namespace GitRead.Net
                 int indexForHash = BinarySearch(fileStream, hashBytes, numberOfHashesToSkip, endIndex);
                 int lastFanoutPos = 4 + 4 + (255 * 4);
                 int totalNumberOfHashes = ReadInt32(fileStream, lastFanoutPos);
+                int indexInto4ByteOffsets = lastFanoutPos + 4 + (20 * totalNumberOfHashes) + (4 * totalNumberOfHashes) + (4 * indexForHash);
+                fileStream.Seek(indexInto4ByteOffsets, SeekOrigin.Begin);
+                fileStream.Read(fourByteBuffer, 0, 4);
+                bool use8ByteOffsets = (fourByteBuffer[3] & 0b1000_0000) != 0;
+                long offset;
+                if (!use8ByteOffsets)
+                {
+                    Array.Reverse(fourByteBuffer);
+                    offset = BitConverter.ToInt32(fourByteBuffer, 0);
+                }
+                else
+                {
+                    fourByteBuffer[3] = (byte)(fourByteBuffer[3] & 0b0111_1111);
+                    Array.Reverse(fourByteBuffer);
+                    int indexInto8ByteOffsets = BitConverter.ToInt32(fourByteBuffer, 0);
+                    indexInto4ByteOffsets = lastFanoutPos + 4 + (20 * totalNumberOfHashes) + (4 * totalNumberOfHashes) + (4 * totalNumberOfHashes) + (4 * indexInto8ByteOffsets);
+                    offset = ReadInt64(fileStream, indexInto4ByteOffsets);
+                }
+                return offset;
             }
         }
 
@@ -140,8 +184,15 @@ namespace GitRead.Net
             }
             fileStream.Read(fourByteBuffer, 0, 4);
             Array.Reverse(fourByteBuffer);
-            int totalNumberOfHashes = BitConverter.ToInt32(fourByteBuffer, 0);
-            return totalNumberOfHashes;
+            return BitConverter.ToInt32(fourByteBuffer, 0);
+        }
+
+        private long ReadInt64(FileStream fileStream, int pos)
+        {
+            fileStream.Seek(pos, SeekOrigin.Begin);
+            fileStream.Read(eightByteBuffer, 0, 8);
+            Array.Reverse(eightByteBuffer);
+            return BitConverter.ToInt64(eightByteBuffer, 0);
         }
 
         private byte[] HexStringToBytes(string str)

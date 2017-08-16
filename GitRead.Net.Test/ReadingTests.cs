@@ -64,7 +64,16 @@ namespace GitRead.Net.Test
         {
             string repoDir = ExtractZippedRepo("csharplang.git");
             Reader reader = new Reader(repoDir);
-            reader.ReadIndex("pack-dae4b1886286da035b337f24ab5b707ad18d8a3c", "411106b0108a37789ed3d53fd781acf8f75ef97b");
+            long packFileOffset = reader.ReadIndex("pack-dae4b1886286da035b337f24ab5b707ad18d8a3c", "411106b0108a37789ed3d53fd781acf8f75ef97b");
+            Assert.AreEqual(744249, packFileOffset);
+        }
+
+        [Test]
+        public void TestCsharplangReadPackfile()
+        {
+            string repoDir = ExtractZippedRepo("csharplang.git");
+            Reader reader = new Reader(repoDir);
+            reader.ReadPackFile("pack-dae4b1886286da035b337f24ab5b707ad18d8a3c", 744249);
         }
 
         private string ExtractZippedRepo(string repoName)
