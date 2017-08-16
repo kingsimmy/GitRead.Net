@@ -13,6 +13,7 @@ namespace GitRead.Net
         private const int whiteSpace = ' ';
         private const int nullChar = '\0';
         private readonly byte[] oneByteBuffer = new byte[1];
+        private readonly byte[] fourByteBuffer = new byte[4];
         private readonly string repoPath;
 
         public Reader(string repoPath)
@@ -101,7 +102,7 @@ namespace GitRead.Net
             {
                 byte[] buffer = new byte[4];
                 fileStream.Read(buffer, 0, 4);
-                if(buffer[0] != 255 || buffer[1] != 116 || buffer[2] != 79 || buffer[3] != 99)
+                if (buffer[0] != 255 || buffer[1] != 116 || buffer[2] != 79 || buffer[3] != 99)
                 {
                     throw new Exception("Invalid index file");
                 }
@@ -123,17 +124,24 @@ namespace GitRead.Net
                     Array.Reverse(buffer);
                     numberOfHashesToSkip = BitConverter.ToInt32(buffer, 0);
                 }
-                fileStream.Read(buffer, 0, 4);
-                Array.Reverse(buffer);
-                int endIndex = BitConverter.ToInt32(buffer, 0);
+                int endIndex = ReadInt32(fileStream);
                 byte[] hashBytes = HexStringToBytes(hash);
                 int indexForHash = BinarySearch(fileStream, hashBytes, numberOfHashesToSkip, endIndex);
                 int lastFanoutPos = 4 + 4 + (255 * 4);
-                fileStream.Seek(lastFanoutPos, SeekOrigin.Begin);
-                fileStream.Read(buffer, 0, 4);
-                Array.Reverse(buffer);
-                int totalNumberOfHashes = BitConverter.ToInt32(buffer, 0);
+                int totalNumberOfHashes = ReadInt32(fileStream, lastFanoutPos);
             }
+        }
+
+        private int ReadInt32(FileStream fileStream, int pos = -1)
+        {
+            if (pos != -1)
+            {
+                fileStream.Seek(pos, SeekOrigin.Begin);
+            }
+            fileStream.Read(fourByteBuffer, 0, 4);
+            Array.Reverse(fourByteBuffer);
+            int totalNumberOfHashes = BitConverter.ToInt32(fourByteBuffer, 0);
+            return totalNumberOfHashes;
         }
 
         private byte[] HexStringToBytes(string str)
