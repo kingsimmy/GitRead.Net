@@ -115,8 +115,19 @@ namespace GitRead.Net
                 switch (packFileObjectType)
                 {
                     case PackFileObjectType.Commit:
+                        Commit result = ReadCommitFromStream(fileStream, length);
                         return;
                 }
+            }
+        }
+
+        internal Commit ReadCommitFromStream(FileStream fileStream, ulong inflatedSize)
+        {
+            fileStream.Seek(2, SeekOrigin.Current);
+            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+            {
+                return ReadCommitCore(reader);
             }
         }
 
@@ -259,7 +270,7 @@ namespace GitRead.Net
                 {
                     gitFileType.Append((char)ch);
                 }
-                if(gitFileType.ToString() != "commit")
+                if (gitFileType.ToString() != "commit")
                 {
                     throw new Exception("Invalid commit object");
                 }
@@ -268,20 +279,40 @@ namespace GitRead.Net
                 {
                     gitFileSize.Append((char)ch);
                 }
-                string treeLine = reader.ReadLine();
-                if (!treeLine.StartsWith("tree"))
-                {
-                    throw new Exception("Invalid commit object");
-                }
-                string tree = treeLine.Substring(5);
-                string authorLine = reader.ReadLine();
-                if (!authorLine.StartsWith("author"))
-                {
-                    throw new Exception("Invalid commit object");
-                }
-                string author = authorLine.Substring(7);
-                return new Commit(tree, null, author);
+                return ReadCommitCore(reader);
             }
+        }
+
+        private static Commit ReadCommitCore(StreamReader reader)
+        {
+            string treeLine = reader.ReadLine();
+            if (!treeLine.StartsWith("tree"))
+            {
+                throw new Exception("Invalid commit object");
+            }
+            string tree = treeLine.Substring(5);
+            List<string> parents = new List<string>();
+            string line = reader.ReadLine();
+            while (line.StartsWith("parent"))
+            {
+                parents.Add(line.Substring(7));
+                line = reader.ReadLine();
+            }
+            string authorLine = line;
+            if (!authorLine.StartsWith("author"))
+            {
+                throw new Exception("Invalid commit object");
+            }
+            string author = authorLine.Substring(7);
+            string committerLine = reader.ReadLine();
+            if (!committerLine.StartsWith("committer"))
+            {
+                throw new Exception("Invalid commit object");
+            }
+            string committer = committerLine.Substring(10);
+            reader.ReadLine();
+            string message = reader.ReadToEnd();
+            return new Commit(tree, parents, author, message);
         }
 
         private string ReadString(Stream stream, int delimiter)
