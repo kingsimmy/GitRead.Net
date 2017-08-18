@@ -99,24 +99,23 @@ namespace GitRead.Net
 
         internal void ReadPackFile(string name, long offset)
         {
-            /*  0 0 0   invalid: Reserved
-                0 0 1	COMMIT object
-                0 1 0	TREE object
-                0 1 1	BLOB object
-                1 0 0	TAG object
-                1 0 1	invalid: Reserved
-                1 1 0	DELTA_ENCODED object w/ offset to base
-                1 1 1	DELTA_ENCODED object w/ base BINARY_OBJ_ID */
+            byte[] lengthBuffer = new byte[1];
             using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".pack")))
             {
-                List<byte> lengthBytes = new List<byte>();
                 fileStream.Seek(offset, SeekOrigin.Begin);
-                fileStream.Read(oneByteBuffer, 0, 1);
-                lengthBytes.Add(oneByteBuffer[0]);
-                while(oneByteBuffer[0] > 128)
+                fileStream.Read(lengthBuffer, 0, 1);
+                PackFileObjectType packFileObjectType = (PackFileObjectType)((lengthBuffer[0] & 0b0111_0000) >> 4);
+                ulong length = (ulong)(lengthBuffer[0] & 0b0000_1111); //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
+                while ((lengthBuffer[0] & 0b1000_0000) != 0)
                 {
-                    fileStream.Read(oneByteBuffer, 0, 1);
-                    lengthBytes.Add(oneByteBuffer[0]);
+                    fileStream.Read(lengthBuffer, 0, 1);
+                    length = length << 7;
+                    length = length + (byte)(lengthBuffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+                }
+                switch (packFileObjectType)
+                {
+                    case PackFileObjectType.Commit:
+                        return;
                 }
             }
         }
