@@ -50,8 +50,8 @@ namespace GitRead.Net
 
         internal string ReadLooseFile(string hash)
         {
-            using (FileStream fileStream = OpenStreamForDeflate(GetObjectFilePath(hash)))
-            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
             {
                 StringBuilder gitFileType = new StringBuilder();
@@ -73,8 +73,8 @@ namespace GitRead.Net
         internal IReadOnlyList<TreeEntry> ReadTree(string hash)
         {
             List<TreeEntry> entries = new List<TreeEntry>();
-            using (FileStream fileStream = OpenStreamForDeflate(GetObjectFilePath(hash)))
-            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
             {
                 string gitFileType = ReadString(deflateStream, whiteSpace);
                 if (gitFileType.ToString() != "tree")
@@ -120,9 +120,13 @@ namespace GitRead.Net
                 case PackFileObjectType.Blob:
                     return extractFunc(fileStream, length);
                 case PackFileObjectType.ObjOfsDelta:
-                    long baseObjOffset = ReadVariableLengthNum(fileStream);
-                    fileStream.Seek(offset, SeekOrigin.Current);
-                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f,l));
+                    long baseObjOffset = ReadVariableLengthOffset(fileStream);
+                    DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream);
+                    long sourceLength = ReadVariableLengthSize(deflateStream);
+                    long targetLength = ReadVariableLengthSize(deflateStream);
+
+                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, (ulong)sourceLength));
+
                     throw new Exception("Unsupported");
             }
             return default(T);
@@ -131,25 +135,39 @@ namespace GitRead.Net
         private byte[] ReadZlibBytes(FileStream fileStream, ulong length)
         {
             byte[] result = new byte[length];
-            fileStream.Seek(2, SeekOrigin.Current);
-            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
             {
                 deflateStream.Read(result, 0, (int)length);
             }
             return result;
         }
 
-        private long ReadVariableLengthNum(FileStream fileStream)
+        private long ReadVariableLengthOffset(Stream stream)
         {
             byte[] buffer = new byte[1];
-            fileStream.Read(buffer, 0, 1);
+            stream.Read(buffer, 0, 1);
             long result = buffer[0] & 0b0111_1111; //First bit is dropped as it is the readNextByte indicator
             while ((buffer[0] & 0b1000_0000) != 0)
             {
-                fileStream.Read(buffer, 0, 1);
+                stream.Read(buffer, 0, 1);
                 result = result + 1;
                 result = result << 7;
                 result = result + (byte)(buffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+            }
+            return result;
+        }
+
+        private long ReadVariableLengthSize(Stream stream)
+        {
+            byte[] buffer = new byte[1];
+            stream.Read(buffer, 0, 1);
+            long result = buffer[0] & 0b0111_1111; //First bit is dropped as it is the readNextByte indicator
+            int counter = 0;
+            while ((buffer[0] & 0b1000_0000) != 0)
+            {
+                counter++;
+                stream.Read(buffer, 0, 1);
+                result = result + ((buffer[0] & 0b0111_1111) << (7 * counter)); //First bit is dropped as it is the readNextByte indicator
             }
             return result;
         }
@@ -334,8 +352,8 @@ namespace GitRead.Net
 
         internal Commit ReadCommitFromFile(string filePath, string hash)
         { 
-            using (FileStream fileStream = OpenStreamForDeflate(filePath))
-            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            using (FileStream fileStream = File.OpenRead(filePath))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
             {
                 StringBuilder gitFileType = new StringBuilder();
@@ -403,12 +421,11 @@ namespace GitRead.Net
             } while (ch != delimiter);
             return builder.ToString();
         }
-
-        private FileStream OpenStreamForDeflate(string filePath)
+        
+        private DeflateStream GetDeflateStreamForZlibData(FileStream fileStream)
         {
-            FileStream fileStream = File.OpenRead(filePath);
-            fileStream.Seek(2, SeekOrigin.Begin);
-            return fileStream;
+            fileStream.Seek(2, SeekOrigin.Current);
+            return new DeflateStream(fileStream, CompressionMode.Decompress);
         }
 
         private enum ComparisonResult
