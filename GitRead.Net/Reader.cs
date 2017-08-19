@@ -101,17 +101,15 @@ namespace GitRead.Net
         {
             byte[] lengthBuffer = new byte[1];
             fileStream.Seek(offset, SeekOrigin.Begin);
-            fileStream.Read(lengthBuffer, 0, 1);
-            long currPos = offset + 1;
+            fileStream.Read(lengthBuffer, 0, 1);            
             PackFileObjectType packFileObjectType = (PackFileObjectType)((lengthBuffer[0] & 0b0111_0000) >> 4);
             ulong length = (ulong)(lengthBuffer[0] & 0b0000_1111); //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
+            int counter = 0;
             while ((lengthBuffer[0] & 0b1000_0000) != 0)
             {
+                counter++;
                 fileStream.Read(lengthBuffer, 0, 1);
-                currPos++;
-                length = length + 1;
-                length = length << 7;
-                length = length + (byte)(lengthBuffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+                length = length + (ulong)((lengthBuffer[0] & 0b0111_1111) << (4 + (7 * (counter - 1)))); //First bit is dropped as it is the readNextByte indicator
             }
             switch (packFileObjectType)
             {
@@ -124,10 +122,12 @@ namespace GitRead.Net
                     DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream);
                     long sourceLength = ReadVariableLengthSize(deflateStream);
                     long targetLength = ReadVariableLengthSize(deflateStream);
-
-                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, (ulong)sourceLength));
-
-                    throw new Exception("Unsupported");
+                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, l));
+                    if(baseObj.Length != sourceLength)
+                    {
+                        throw new Exception("Base object did not match expected length");
+                    }
+                    return default(T);
             }
             return default(T);
         }
