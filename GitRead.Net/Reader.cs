@@ -109,6 +109,7 @@ namespace GitRead.Net
             {
                 fileStream.Read(lengthBuffer, 0, 1);
                 currPos++;
+                length = length + 1;
                 length = length << 7;
                 length = length + (byte)(lengthBuffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
             }
@@ -119,7 +120,7 @@ namespace GitRead.Net
                 case PackFileObjectType.Blob:
                     return extractFunc(fileStream, length);
                 case PackFileObjectType.ObjOfsDelta:
-                    long baseObjOffset = ReadVariableLengthInt(fileStream);
+                    long baseObjOffset = ReadVariableLengthNum(fileStream);
                     fileStream.Seek(offset, SeekOrigin.Current);
                     byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f,l));
                     throw new Exception("Unsupported");
@@ -138,14 +139,15 @@ namespace GitRead.Net
             return result;
         }
 
-        private long ReadVariableLengthInt(FileStream fileStream)
+        private long ReadVariableLengthNum(FileStream fileStream)
         {
             byte[] buffer = new byte[1];
             fileStream.Read(buffer, 0, 1);
-            long result = (long)(buffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+            long result = buffer[0] & 0b0111_1111; //First bit is dropped as it is the readNextByte indicator
             while ((buffer[0] & 0b1000_0000) != 0)
             {
                 fileStream.Read(buffer, 0, 1);
+                result = result + 1;
                 result = result << 7;
                 result = result + (byte)(buffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
             }
