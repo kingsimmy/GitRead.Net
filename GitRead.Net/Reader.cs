@@ -97,28 +97,59 @@ namespace GitRead.Net
             return entries;
         }
 
-        internal T ReadPackFile<T>(string name, string hash, long offset, Func<FileStream, T> extractFunc)
+        internal T ReadPackFile<T>(FileStream fileStream, string hash, long offset, Func<FileStream, ulong, T> extractFunc)
         {
             byte[] lengthBuffer = new byte[1];
-            using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".pack")))
+            fileStream.Seek(offset, SeekOrigin.Begin);
+            fileStream.Read(lengthBuffer, 0, 1);
+            long currPos = offset + 1;
+            PackFileObjectType packFileObjectType = (PackFileObjectType)((lengthBuffer[0] & 0b0111_0000) >> 4);
+            ulong length = (ulong)(lengthBuffer[0] & 0b0000_1111); //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
+            while ((lengthBuffer[0] & 0b1000_0000) != 0)
             {
-                fileStream.Seek(offset, SeekOrigin.Begin);
                 fileStream.Read(lengthBuffer, 0, 1);
-                PackFileObjectType packFileObjectType = (PackFileObjectType)((lengthBuffer[0] & 0b0111_0000) >> 4);
-                ulong length = (ulong)(lengthBuffer[0] & 0b0000_1111); //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
-                while ((lengthBuffer[0] & 0b1000_0000) != 0)
-                {
-                    fileStream.Read(lengthBuffer, 0, 1);
-                    length = length << 7;
-                    length = length + (byte)(lengthBuffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
-                }
-                switch (packFileObjectType)
-                {
-                    case PackFileObjectType.Commit:
-                        return extractFunc(fileStream);
-                }
-                return default(T);
+                currPos++;
+                length = length << 7;
+                length = length + (byte)(lengthBuffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
             }
+            switch (packFileObjectType)
+            {
+                case PackFileObjectType.Commit:
+                    return extractFunc(fileStream, length);
+                case PackFileObjectType.Blob:
+                    return extractFunc(fileStream, length);
+                case PackFileObjectType.ObjOfsDelta:
+                    long baseObjOffset = ReadVariableLengthInt(fileStream);
+                    fileStream.Seek(offset, SeekOrigin.Current);
+                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f,l));
+                    throw new Exception("Unsupported");
+            }
+            return default(T);
+        }
+
+        private byte[] ReadZlibBytes(FileStream fileStream, ulong length)
+        {
+            byte[] result = new byte[length];
+            fileStream.Seek(2, SeekOrigin.Current);
+            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
+            {
+                deflateStream.Read(result, 0, (int)length);
+            }
+            return result;
+        }
+
+        private long ReadVariableLengthInt(FileStream fileStream)
+        {
+            byte[] buffer = new byte[1];
+            fileStream.Read(buffer, 0, 1);
+            long result = (long)(buffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+            while ((buffer[0] & 0b1000_0000) != 0)
+            {
+                fileStream.Read(buffer, 0, 1);
+                result = result << 7;
+                result = result + (byte)(buffer[0] & 0b0111_1111); //First bit is dropped as it is the readNextByte indicator
+            }
+            return result;
         }
 
         internal Commit ReadCommitFromStream(FileStream fileStream, string hash)
@@ -171,7 +202,7 @@ namespace GitRead.Net
                 int indexInto4ByteOffsets = lastFanoutPos + 4 + (20 * totalNumberOfHashes) + (4 * totalNumberOfHashes) + (4 * indexForHash);
                 fileStream.Seek(indexInto4ByteOffsets, SeekOrigin.Begin);
                 fileStream.Read(fourByteBuffer, 0, 4);
-                bool use8ByteOffsets = (fourByteBuffer[3] & 0b1000_0000) != 0;
+                bool use8ByteOffsets = (fourByteBuffer[0] & 0b1000_0000) != 0;
                 long offset;
                 if (!use8ByteOffsets)
                 {
@@ -278,11 +309,11 @@ namespace GitRead.Net
             }
             else
             {
-                return ReadObjectFromPack(hash, (FileStream f) => ReadCommitFromStream(f, hash));
+                return ReadObjectFromPack(hash, (FileStream f, ulong _) => ReadCommitFromStream(f, hash));
             }
         }
 
-        private T ReadObjectFromPack<T>(string hash, Func<FileStream, T> extractFunc)
+        private T ReadObjectFromPack<T>(string hash, Func<FileStream, ulong, T> extractFunc)
         {
             foreach(string indexFile in Directory.EnumerateFiles(Path.Combine(repoPath, "objects", "pack"), "*.idx"))
             {
@@ -290,7 +321,10 @@ namespace GitRead.Net
                 long offset = ReadIndex(packName, hash);
                 if(offset != -1)
                 {
-                    return ReadPackFile(packName, hash, offset, extractFunc);
+                    using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", packName + ".pack")))
+                    {
+                        return ReadPackFile(fileStream, hash, offset, extractFunc);
+                    }
                 }
             }
             return default(T);

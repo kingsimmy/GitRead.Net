@@ -6,7 +6,7 @@
         Tree = 0b0000_0010,
         Blob = 0b0000_0011,
         Tag = 0b0000_0100,
-        DeltaOffsetToBase = 0b0000_0110, //DELTA_ENCODED object w/ offset to base
-        DeltaOffsetToObj = 0b0000_0111 //DELTA_ENCODED object w/ base BINARY_OBJ_ID */
+        ObjOfsDelta = 0b0000_0110, //DELTA_ENCODED object w/ offset to base
+        ObjRefDelta = 0b0000_0111 //DELTA_ENCODED object w/ base BINARY_OBJ_ID */
     }
 }
