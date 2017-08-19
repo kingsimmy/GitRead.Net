@@ -24,8 +24,8 @@ namespace GitRead.Net
 
         public string ReadHead()
         {
-            string[] lines = File.ReadAllLines(Path.Combine(repoPath, "HEAD"));
-            return lines[0];
+            string[] lines = File.ReadAllLines(Path.Combine(repoPath, "HEAD"));            
+            return lines[0].Split('/').Last();
         }
 
         public string GetBranch(string branchName)
@@ -50,7 +50,7 @@ namespace GitRead.Net
 
         internal string ReadLooseFile(string hash)
         {
-            using (FileStream fileStream = OpenStreamForDeflate(hash))
+            using (FileStream fileStream = OpenStreamForDeflate(GetObjectFilePath(hash)))
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
             {
@@ -73,7 +73,7 @@ namespace GitRead.Net
         internal IReadOnlyList<TreeEntry> ReadTree(string hash)
         {
             List<TreeEntry> entries = new List<TreeEntry>();
-            using (FileStream fileStream = OpenStreamForDeflate(hash))
+            using (FileStream fileStream = OpenStreamForDeflate(GetObjectFilePath(hash)))
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
             {
                 string gitFileType = ReadString(deflateStream, whiteSpace);
@@ -97,7 +97,7 @@ namespace GitRead.Net
             return entries;
         }
 
-        internal void ReadPackFile(string name, long offset)
+        internal T ReadPackFile<T>(string name, string hash, long offset, Func<FileStream, T> extractFunc)
         {
             byte[] lengthBuffer = new byte[1];
             using (FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", "pack", name + ".pack")))
@@ -115,19 +115,19 @@ namespace GitRead.Net
                 switch (packFileObjectType)
                 {
                     case PackFileObjectType.Commit:
-                        Commit result = ReadCommitFromStream(fileStream, length);
-                        return;
+                        return extractFunc(fileStream);
                 }
+                return default(T);
             }
         }
 
-        internal Commit ReadCommitFromStream(FileStream fileStream, ulong inflatedSize)
+        internal Commit ReadCommitFromStream(FileStream fileStream, string hash)
         {
             fileStream.Seek(2, SeekOrigin.Current);
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
             {
-                return ReadCommitCore(reader);
+                return ReadCommitCore(reader, hash);
             }
         }
 
@@ -162,6 +162,10 @@ namespace GitRead.Net
                 int endIndex = ReadInt32(fileStream);
                 byte[] hashBytes = HexStringToBytes(hash);
                 int indexForHash = BinarySearch(fileStream, hashBytes, numberOfHashesToSkip, endIndex);
+                if(indexForHash == -1)
+                {
+                    return -1;
+                }
                 int lastFanoutPos = 4 + 4 + (255 * 4);
                 int totalNumberOfHashes = ReadInt32(fileStream, lastFanoutPos);
                 int indexInto4ByteOffsets = lastFanoutPos + 4 + (20 * totalNumberOfHashes) + (4 * totalNumberOfHashes) + (4 * indexForHash);
@@ -230,7 +234,7 @@ namespace GitRead.Net
             }
             if(startIndex == endIndex)
             {
-                throw new Exception("Could not find hash");
+                return -1;
             }
             if(comparison == ComparisonResult.Less)
             {
@@ -258,9 +262,43 @@ namespace GitRead.Net
             return ComparisonResult.Equal;
         }
 
+        internal string GetObjectFilePath(string hash)
+        {
+            string folderName = hash.Substring(0, 2);
+            string fileName = hash.Substring(2);
+            return Path.Combine(repoPath, "objects", folderName, fileName);
+        }
+
         internal Commit ReadCommit(string hash)
         {
-            using (FileStream fileStream = OpenStreamForDeflate(hash))
+            string filePath = GetObjectFilePath(hash);
+            if (File.Exists(filePath))
+            {
+                return ReadCommitFromFile(filePath, hash);
+            }
+            else
+            {
+                return ReadObjectFromPack(hash, (FileStream f) => ReadCommitFromStream(f, hash));
+            }
+        }
+
+        private T ReadObjectFromPack<T>(string hash, Func<FileStream, T> extractFunc)
+        {
+            foreach(string indexFile in Directory.EnumerateFiles(Path.Combine(repoPath, "objects", "pack"), "*.idx"))
+            {
+                string packName = Path.GetFileNameWithoutExtension(indexFile);
+                long offset = ReadIndex(packName, hash);
+                if(offset != -1)
+                {
+                    return ReadPackFile(packName, hash, offset, extractFunc);
+                }
+            }
+            return default(T);
+        }
+
+        internal Commit ReadCommitFromFile(string filePath, string hash)
+        { 
+            using (FileStream fileStream = OpenStreamForDeflate(filePath))
             using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
             {
@@ -279,11 +317,11 @@ namespace GitRead.Net
                 {
                     gitFileSize.Append((char)ch);
                 }
-                return ReadCommitCore(reader);
+                return ReadCommitCore(reader, hash);
             }
         }
 
-        private static Commit ReadCommitCore(StreamReader reader)
+        private static Commit ReadCommitCore(StreamReader reader, string hash)
         {
             string treeLine = reader.ReadLine();
             if (!treeLine.StartsWith("tree"))
@@ -312,7 +350,7 @@ namespace GitRead.Net
             string committer = committerLine.Substring(10);
             reader.ReadLine();
             string message = reader.ReadToEnd();
-            return new Commit(tree, parents, author, message);
+            return new Commit(hash, tree, parents, author, message);
         }
 
         private string ReadString(Stream stream, int delimiter)
@@ -330,11 +368,9 @@ namespace GitRead.Net
             return builder.ToString();
         }
 
-        private FileStream OpenStreamForDeflate(string hash)
+        private FileStream OpenStreamForDeflate(string filePath)
         {
-            string folderName = hash.Substring(0, 2);
-            string fileName = hash.Substring(2);
-            FileStream fileStream = File.OpenRead(Path.Combine(repoPath, "objects", folderName, fileName));
+            FileStream fileStream = File.OpenRead(filePath);
             fileStream.Seek(2, SeekOrigin.Begin);
             return fileStream;
         }
