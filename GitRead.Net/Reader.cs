@@ -128,7 +128,7 @@ namespace GitRead.Net
                     byte[] deltaBytes = new byte[deltaDataLength];
                     deflateStream.Read(deltaBytes, 0, deltaDataLength);
                     byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, l));
-                    if(baseBytes.Length != sourceDataTuple.length)
+                    if (baseBytes.Length != sourceDataTuple.length)
                     {
                         throw new Exception("Base object did not match expected length");
                     }
@@ -141,7 +141,44 @@ namespace GitRead.Net
         private byte[] Undeltify(byte[] baseBytes, byte[] deltaBytes, long targetLength)
         {
             byte[] targetBuffer = new byte[targetLength];
-
+            int deltaIndex = 0;
+            int targetIndex = 0;
+            while (deltaIndex < deltaBytes.Length)
+            {
+                byte deltaByte = deltaBytes[deltaIndex];
+                deltaIndex++;
+                if ((deltaByte & 0b1000_0000) != 0) //copy
+                {
+                    int offset = 0;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if ((deltaByte & (1 << i)) != 0)
+                        {
+                            offset = offset + (deltaBytes[deltaIndex] << (8 * i));
+                            deltaIndex++;
+                        }
+                    }
+                    int bytesToCopy = 0;
+                    for (int i = 4; i < 7; i++)
+                    {
+                        if ((deltaByte & (1 << i)) != 0)
+                        {
+                            bytesToCopy = bytesToCopy + (deltaBytes[deltaIndex] << (8 * i));
+                            deltaIndex++;
+                        }
+                    }
+                }
+                else //insert
+                {
+                    int bytesToInsert = deltaByte;
+                    for (int i = 0; i < bytesToInsert; i++)
+                    {
+                        targetBuffer[targetIndex] = deltaBytes[deltaIndex];
+                        targetIndex++;
+                        deltaIndex++;
+                    }
+                }
+            }
             return targetBuffer;
         }
 
