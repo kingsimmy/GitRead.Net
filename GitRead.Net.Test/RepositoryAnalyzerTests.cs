@@ -11,7 +11,7 @@ namespace GitRead.Net.Test
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
             int count = repositoryAnalyzer.GetTotalNumberOfCommits();
-            Assert.AreEqual(189, count);
+            Assert.AreEqual(157, count);
         }
     }
 }

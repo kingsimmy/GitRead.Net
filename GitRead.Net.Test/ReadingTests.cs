@@ -74,7 +74,7 @@ namespace GitRead.Net.Test
             string hash = "411106b0108a37789ed3d53fd781acf8f75ef97b";
             using (FileStream fileStream = File.OpenRead(Path.Combine(repoDir, "objects", "pack", "pack-dae4b1886286da035b337f24ab5b707ad18d8a3c" + ".pack")))
             {
-                reader.ReadPackFile(fileStream, hash, 744249, (FileStream f, ulong _) => reader.ReadCommitFromStream(f, hash));
+                reader.ReadPackFile(fileStream, hash, 744249, (Stream s, ulong _, bool useZlib) => reader.ReadCommitFromStream(s, hash, useZlib));
             }
         }
     }

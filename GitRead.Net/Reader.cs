@@ -97,7 +97,7 @@ namespace GitRead.Net
             return entries;
         }
 
-        internal T ReadPackFile<T>(FileStream fileStream, string hash, long offset, Func<FileStream, ulong, T> extractFunc)
+        internal T ReadPackFile<T>(FileStream fileStream, string hash, long offset, Func<Stream, ulong, bool, T> extractFunc)
         {
             byte[] lengthBuffer = new byte[1];
             fileStream.Seek(offset, SeekOrigin.Begin);
@@ -114,9 +114,9 @@ namespace GitRead.Net
             switch (packFileObjectType)
             {
                 case PackFileObjectType.Commit:
-                    return extractFunc(fileStream, length);
+                    return extractFunc(fileStream, length, true);
                 case PackFileObjectType.Blob:
-                    return extractFunc(fileStream, length);
+                    return extractFunc(fileStream, length, true);
                 case PackFileObjectType.ObjOfsDelta:
                     long baseObjOffset = ReadVariableLengthOffset(fileStream);
                     DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream);
@@ -127,13 +127,13 @@ namespace GitRead.Net
                     deltaDataLength -= targetLengthTuple.bytesRead;
                     byte[] deltaBytes = new byte[deltaDataLength];
                     deflateStream.Read(deltaBytes, 0, deltaDataLength);
-                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, l));
+                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (Stream f, ulong l, bool _) => ReadZlibBytes(f, l));
                     if (baseBytes.Length != sourceDataTuple.length)
                     {
                         throw new Exception("Base object did not match expected length");
                     }
                     byte[] undeltifiedData = Undeltify(baseBytes, deltaBytes, targetLengthTuple.length);
-                    return default(T);
+                    return extractFunc(new MemoryStream(undeltifiedData), length, false);
             }
             return default(T);
         }
@@ -167,6 +167,11 @@ namespace GitRead.Net
                             deltaIndex++;
                         }
                     }
+                    for (int i = 0; i < bytesToCopy; i++)
+                    {
+                        targetBuffer[targetIndex] = baseBytes[offset + i];
+                        targetIndex++;
+                    }
                 }
                 else //insert
                 {
@@ -182,10 +187,10 @@ namespace GitRead.Net
             return targetBuffer;
         }
 
-        private byte[] ReadZlibBytes(FileStream fileStream, ulong length)
+        private byte[] ReadZlibBytes(Stream stream, ulong length)
         {
             byte[] result = new byte[length];
-            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
             {
                 deflateStream.Read(result, 0, (int)length);
             }
@@ -223,13 +228,22 @@ namespace GitRead.Net
             return (counter, result);
         }
 
-        internal Commit ReadCommitFromStream(FileStream fileStream, string hash)
+        internal Commit ReadCommitFromStream(Stream stream, string hash, bool useZlib)
         {
-            fileStream.Seek(2, SeekOrigin.Current);
-            using (DeflateStream deflateStream = new DeflateStream(fileStream, CompressionMode.Decompress))
-            using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+            if (useZlib)
             {
-                return ReadCommitCore(reader, hash);
+                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+                using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+                {
+                    return ReadCommitCore(reader, hash);
+                }
+            }
+            else
+            {
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    return ReadCommitCore(reader, hash);
+                }
             }
         }
 
@@ -380,11 +394,11 @@ namespace GitRead.Net
             }
             else
             {
-                return ReadObjectFromPack(hash, (FileStream f, ulong _) => ReadCommitFromStream(f, hash));
+                return ReadObjectFromPack(hash, (Stream s, ulong _, bool useZlib) => ReadCommitFromStream(s, hash, useZlib));
             }
         }
 
-        private T ReadObjectFromPack<T>(string hash, Func<FileStream, ulong, T> extractFunc)
+        private T ReadObjectFromPack<T>(string hash, Func<Stream, ulong, bool, T> extractFunc)
         {
             foreach(string indexFile in Directory.EnumerateFiles(Path.Combine(repoPath, "objects", "pack"), "*.idx"))
             {
@@ -473,10 +487,10 @@ namespace GitRead.Net
             return builder.ToString();
         }
         
-        private DeflateStream GetDeflateStreamForZlibData(FileStream fileStream)
+        private DeflateStream GetDeflateStreamForZlibData(Stream stream)
         {
-            fileStream.Seek(2, SeekOrigin.Current);
-            return new DeflateStream(fileStream, CompressionMode.Decompress);
+            stream.Seek(2, SeekOrigin.Current);
+            return new DeflateStream(stream, CompressionMode.Decompress);
         }
 
         private enum ComparisonResult
