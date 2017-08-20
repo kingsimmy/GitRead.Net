@@ -120,16 +120,29 @@ namespace GitRead.Net
                 case PackFileObjectType.ObjOfsDelta:
                     long baseObjOffset = ReadVariableLengthOffset(fileStream);
                     DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream);
-                    long sourceLength = ReadVariableLengthSize(deflateStream);
-                    long targetLength = ReadVariableLengthSize(deflateStream);
-                    byte[] baseObj = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, l));
-                    if(baseObj.Length != sourceLength)
+                    int deltaDataLength = (int)length;
+                    var sourceDataTuple = ReadVariableLengthSize(deflateStream);
+                    deltaDataLength -= sourceDataTuple.bytesRead;
+                    var targetLengthTuple = ReadVariableLengthSize(deflateStream);
+                    deltaDataLength -= targetLengthTuple.bytesRead;
+                    byte[] deltaBytes = new byte[deltaDataLength];
+                    deflateStream.Read(deltaBytes, 0, deltaDataLength);
+                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (FileStream f, ulong l) => ReadZlibBytes(f, l));
+                    if(baseBytes.Length != sourceDataTuple.length)
                     {
                         throw new Exception("Base object did not match expected length");
                     }
+                    byte[] undeltifiedData = Undeltify(baseBytes, deltaBytes, targetLengthTuple.length);
                     return default(T);
             }
             return default(T);
+        }
+
+        private byte[] Undeltify(byte[] baseBytes, byte[] deltaBytes, long targetLength)
+        {
+            byte[] targetBuffer = new byte[targetLength];
+
+            return targetBuffer;
         }
 
         private byte[] ReadZlibBytes(FileStream fileStream, ulong length)
@@ -157,7 +170,7 @@ namespace GitRead.Net
             return result;
         }
 
-        private long ReadVariableLengthSize(Stream stream)
+        private (int bytesRead, long length) ReadVariableLengthSize(Stream stream)
         {
             byte[] buffer = new byte[1];
             stream.Read(buffer, 0, 1);
@@ -169,7 +182,8 @@ namespace GitRead.Net
                 stream.Read(buffer, 0, 1);
                 result = result + ((buffer[0] & 0b0111_1111) << (7 * counter)); //First bit is dropped as it is the readNextByte indicator
             }
-            return result;
+            counter++;
+            return (counter, result);
         }
 
         internal Commit ReadCommitFromStream(FileStream fileStream, string hash)
