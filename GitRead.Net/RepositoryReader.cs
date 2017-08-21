@@ -28,7 +28,7 @@ namespace GitRead.Net
             return lines[0].Split('/').Last();
         }
 
-        public string GetBranch(string branchName)
+        public string ReadBranch(string branchName)
         {
             string refFilePath = Path.Combine(repoPath, "refs", "heads", branchName);
             if (File.Exists(refFilePath))
@@ -48,7 +48,7 @@ namespace GitRead.Net
             throw new Exception($"Could not find file {refFilePath} or file {packedRefsFilePath}");
         }
 
-        internal string ReadLooseFile(string hash)
+        internal string ReadBlob(string hash)
         {
             using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
             using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
@@ -59,6 +59,10 @@ namespace GitRead.Net
                 while ((ch = reader.Read()) != whiteSpace)
                 {
                     gitFileType.Append((char)ch);
+                }
+                if(gitFileType.ToString() != "blob")
+                {
+                    throw new Exception($"Object with hash {hash} is not a blob. It is a {gitFileType.ToString()}.");
                 }
                 StringBuilder gitFileSize = new StringBuilder();
                 while ((ch = reader.Read()) != nullChar)
@@ -79,7 +83,7 @@ namespace GitRead.Net
                 string gitFileType = ReadString(deflateStream, whiteSpace);
                 if (gitFileType.ToString() != "tree")
                 {
-                    throw new Exception("Invalid tree object");
+                    throw new Exception($"Object with hash {hash} is not a tree. It is a {gitFileType}.");
                 }
                 string gitFileSize = ReadString(deflateStream, nullChar);
                 int length = int.Parse(gitFileSize);

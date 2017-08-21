@@ -13,7 +13,7 @@ namespace GitRead.Net.Test
         {
             string repoDir = TestUtils.ExtractZippedRepo("TestRepo01");
             RepositoryReader reader = new RepositoryReader(repoDir);
-            string res = reader.ReadLooseFile("d670460b4b4aece5915caf5c68d12f560a9fe3e4");
+            string res = reader.ReadBlob("d670460b4b4aece5915caf5c68d12f560a9fe3e4");
             Assert.AreEqual("test content\n", res);
         }
 
@@ -22,7 +22,7 @@ namespace GitRead.Net.Test
         {
             string repoDir = TestUtils.ExtractZippedRepo("TestRepo02");
             RepositoryReader reader = new RepositoryReader(repoDir);
-            string hash = reader.GetBranch("master");
+            string hash = reader.ReadBranch("master");
             Commit commit = reader.ReadCommit(hash);
             StringAssert.AreEqualIgnoringCase("ce2d3a85f185830a19e84d404155bf9847ede8b8", commit.Tree);
         }
@@ -44,7 +44,7 @@ namespace GitRead.Net.Test
         {
             string repoDir = TestUtils.ExtractZippedRepo("TestRepo02");
             RepositoryReader reader = new RepositoryReader(repoDir);
-            string res = reader.ReadLooseFile("31d6d2184fe8deab8e52bd9581d67f35d4ecd5ca");
+            string res = reader.ReadBlob("31d6d2184fe8deab8e52bd9581d67f35d4ecd5ca");
             Assert.AreEqual("abc xyz", res);
         }
 
@@ -53,7 +53,7 @@ namespace GitRead.Net.Test
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryReader reader = new RepositoryReader(repoDir);
-            string res = reader.GetBranch("master");
+            string res = reader.ReadBranch("master");
             Assert.AreEqual("411106b0108a37789ed3d53fd781acf8f75ef97b", res);
         }
 

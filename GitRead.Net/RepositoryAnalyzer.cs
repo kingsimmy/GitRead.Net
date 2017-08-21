@@ -16,7 +16,7 @@ namespace GitRead.Net
         public int GetTotalNumberOfCommits()
         {
             string head = repositoryReader.ReadHead();
-            string hashForCommit = repositoryReader.GetBranch(head);            
+            string hashForCommit = repositoryReader.ReadBranch(head);            
             HashSet<string> readCommits = new HashSet<string>();
             List<string> toReadCommits = new List<string>() { hashForCommit };
             while (toReadCommits.Count > 0)
