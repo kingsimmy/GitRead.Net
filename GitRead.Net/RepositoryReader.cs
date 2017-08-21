@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace GitRead.Net
 {
-    public class Reader
+    public class RepositoryReader
     {
         private const int whiteSpace = ' ';
         private const int nullChar = '\0';
@@ -17,7 +17,7 @@ namespace GitRead.Net
         private readonly byte[] eightByteBuffer = new byte[8];
         private readonly string repoPath;
 
-        public Reader(string repoPath)
+        public RepositoryReader(string repoPath)
         {
             this.repoPath = repoPath.EndsWith(".git") ? repoPath : Path.Combine(repoPath, ".git");
         }

@@ -6,11 +6,11 @@ namespace GitRead.Net
 {
     public class RepositoryAnalyzer
     {
-        private readonly Reader repositoryReader;
+        private readonly RepositoryReader repositoryReader;
 
         public RepositoryAnalyzer(string repoPath)
         {
-            repositoryReader = new Reader(repoPath);
+            repositoryReader = new RepositoryReader(repoPath);
         }
 
         public int GetTotalNumberOfCommits()
