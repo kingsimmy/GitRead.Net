@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace GitRead.Net
 {
-    public class IndexFileReader
+    public class PackIndexPrinter
     {
         private readonly string repoPath;
 
-        public IndexFileReader(string repoPath)
+        public PackIndexPrinter(string repoPath)
         {
             this.repoPath = repoPath.EndsWith(".git") ? repoPath : Path.Combine(repoPath, ".git");
         }

@@ -61,7 +61,7 @@ namespace GitRead.Net.Test
         public void TestCsharplangReadIndex()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
-            RepositoryReader reader = new RepositoryReader(repoDir);
+            PackIndexReader reader = new PackIndexReader(repoDir);
             long packFileOffset = reader.ReadIndex("pack-dae4b1886286da035b337f24ab5b707ad18d8a3c", "411106b0108a37789ed3d53fd781acf8f75ef97b");
             Assert.AreEqual(744249, packFileOffset);
         }
