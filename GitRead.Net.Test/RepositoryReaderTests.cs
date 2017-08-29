@@ -72,10 +72,9 @@ namespace GitRead.Net.Test
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryReader reader = new RepositoryReader(repoDir);
             string hash = "411106b0108a37789ed3d53fd781acf8f75ef97b";
-            using (FileStream fileStream = File.OpenRead(Path.Combine(repoDir, "objects", "pack", "pack-dae4b1886286da035b337f24ab5b707ad18d8a3c" + ".pack")))
-            {
-                reader.ReadPackFile(fileStream, hash, 744249, (Stream s, ulong _, bool useZlib) => reader.ReadCommitFromStream(s, hash, useZlib));
-            }
+            Commit res = reader.ReadCommit(hash);
+            Assert.AreEqual(res.Message, "Add design notes\n");
+            Assert.AreEqual(res.Tree, "1af7239766b45f2c85f422a99867919ca9e1e935");
         }
     }
 }

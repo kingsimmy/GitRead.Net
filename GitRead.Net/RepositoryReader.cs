@@ -230,33 +230,7 @@ namespace GitRead.Net
             }
             counter++;
             return (counter, result);
-        }
-
-        internal Commit ReadCommitFromStream(Stream stream, string hash, bool useZlib)
-        {
-            if (useZlib)
-            {
-                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
-                using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
-                {
-                    return ReadCommitCore(reader, hash);
-                }
-            }
-            else
-            {
-                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
-                {
-                    return ReadCommitCore(reader, hash);
-                }
-            }
-        }
-
-        internal string GetObjectFilePath(string hash)
-        {
-            string folderName = hash.Substring(0, 2);
-            string fileName = hash.Substring(2);
-            return Path.Combine(repoPath, "objects", folderName, fileName);
-        }
+        }        
 
         internal Commit ReadCommit(string hash)
         {
@@ -288,7 +262,7 @@ namespace GitRead.Net
             return default(T);
         }
 
-        internal Commit ReadCommitFromFile(string filePath, string hash)
+        private Commit ReadCommitFromFile(string filePath, string hash)
         { 
             using (FileStream fileStream = File.OpenRead(filePath))
             using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
@@ -343,6 +317,32 @@ namespace GitRead.Net
             reader.ReadLine();
             string message = reader.ReadToEnd();
             return new Commit(hash, tree, parents, author, message);
+        }
+
+        private Commit ReadCommitFromStream(Stream stream, string hash, bool useZlib)
+        {
+            if (useZlib)
+            {
+                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+                using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+                {
+                    return ReadCommitCore(reader, hash);
+                }
+            }
+            else
+            {
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    return ReadCommitCore(reader, hash);
+                }
+            }
+        }
+
+        private string GetObjectFilePath(string hash)
+        {
+            string folderName = hash.Substring(0, 2);
+            string fileName = hash.Substring(2);
+            return Path.Combine(repoPath, "objects", folderName, fileName);
         }
 
         private string ReadString(Stream stream, int delimiter)
