@@ -1,7 +1,6 @@
 ﻿using GitRead.Net.Data;
 using NUnit.Framework;
 using System.Collections.Generic;
-using System.IO;
 
 namespace GitRead.Net.Test
 {
@@ -76,5 +75,19 @@ namespace GitRead.Net.Test
             Assert.AreEqual(res.Message, "Add design notes\n");
             Assert.AreEqual(res.Tree, "1af7239766b45f2c85f422a99867919ca9e1e935");
         }
+
+        [Test]
+        public void TestCsharplangReadTree()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryReader reader = new RepositoryReader(repoDir);
+            string hash = "1af7239766b45f2c85f422a99867919ca9e1e935";
+            var res = reader.ReadTree(hash);
+            Assert.AreEqual(res.Count, 6);
+            Assert.AreEqual(res[0].Hash, "176A458F94E0EA5272CE67C36BF30B6BE9CAF623");
+            Assert.AreEqual(res[0].Mode, TreeEntryMode.RegularNonExecutableFile);
+            Assert.AreEqual(res[0].Name, ".gitattributes");
+        }
+
     }
 }

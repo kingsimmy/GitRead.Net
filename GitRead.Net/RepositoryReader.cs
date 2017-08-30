@@ -76,50 +76,51 @@ namespace GitRead.Net
 
         internal IReadOnlyList<TreeEntry> ReadTree(string hash)
         {
-            List<TreeEntry> entries = new List<TreeEntry>();
-            using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
-            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
+            string filePath = GetObjectFilePath(hash);
+            if (File.Exists(filePath))
             {
-                string gitFileType = ReadString(deflateStream, whiteSpace);
-                if (gitFileType.ToString() != "tree")
-                {
-                    throw new Exception($"Object with hash {hash} is not a tree. It is a {gitFileType}.");
-                }
-                string gitFileSize = ReadString(deflateStream, nullChar);
-                int length = int.Parse(gitFileSize);
-                while (length > 0)
-                {
-                    string mode = ReadString(deflateStream, whiteSpace);
-                    string name = ReadString(deflateStream, nullChar);
-                    byte[] buffer = new byte[20];
-                    deflateStream.Read(buffer, 0, 20);
-                    string itemHash = String.Concat(buffer.Select(x => x.ToString("X2")));
-                    length -= (mode.Length + 1 + name.Length + 1 + itemHash.Length);
-                    entries.Add(new TreeEntry(name, itemHash, mode));
-                }
+                return ReadTreeFromFile(filePath, hash);
             }
-            return entries;
+            else
+            {
+                return ReadObjectFromPack(hash, (Stream s, long length, bool useZlib) => ReadTreeFromStream(s, length, useZlib));
+            }
+        }
+        
+        internal Commit ReadCommit(string hash)
+        {
+            string filePath = GetObjectFilePath(hash);
+            if (File.Exists(filePath))
+            {
+                return ReadCommitFromFile(filePath, hash);
+            }
+            else
+            {
+                return ReadObjectFromPack(hash, (Stream s, long _, bool useZlib) => ReadCommitFromStream(s, hash, useZlib));
+            }
         }
 
-        internal T ReadPackFile<T>(FileStream fileStream, string hash, long offset, Func<Stream, ulong, bool, T> extractFunc)
+        private T ReadPackFile<T>(FileStream fileStream, string hash, long offset, Func<Stream, long, bool, T> extractFunc)
         {
             byte[] lengthBuffer = new byte[1];
             fileStream.Seek(offset, SeekOrigin.Begin);
             fileStream.Read(lengthBuffer, 0, 1);            
             PackFileObjectType packFileObjectType = (PackFileObjectType)((lengthBuffer[0] & 0b0111_0000) >> 4);
-            ulong length = (ulong)(lengthBuffer[0] & 0b0000_1111); //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
+            long length = lengthBuffer[0] & 0b0000_1111; //First four bits are dropped as they are they are readNextByte indicator and packFileObjectType
             int counter = 0;
             while ((lengthBuffer[0] & 0b1000_0000) != 0)
             {
                 counter++;
                 fileStream.Read(lengthBuffer, 0, 1);
-                length = length + (ulong)((lengthBuffer[0] & 0b0111_1111) << (4 + (7 * (counter - 1)))); //First bit is dropped as it is the readNextByte indicator
+                length = length + ((lengthBuffer[0] & 0b0111_1111) << (4 + (7 * (counter - 1)))); //First bit is dropped as it is the readNextByte indicator
             }
             switch (packFileObjectType)
             {
                 case PackFileObjectType.Commit:
                     return extractFunc(fileStream, length, true);
                 case PackFileObjectType.Blob:
+                    return extractFunc(fileStream, length, true);
+                case PackFileObjectType.Tree:
                     return extractFunc(fileStream, length, true);
                 case PackFileObjectType.ObjOfsDelta:
                     long baseObjOffset = ReadVariableLengthOffset(fileStream);
@@ -131,13 +132,13 @@ namespace GitRead.Net
                     deltaDataLength -= targetLengthTuple.bytesRead;
                     byte[] deltaBytes = new byte[deltaDataLength];
                     deflateStream.Read(deltaBytes, 0, deltaDataLength);
-                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (Stream f, ulong l, bool _) => ReadZlibBytes(f, l));
+                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (Stream f, long l, bool _) => ReadZlibBytes(f, l));
                     if (baseBytes.Length != sourceDataTuple.length)
                     {
                         throw new Exception("Base object did not match expected length");
                     }
                     byte[] undeltifiedData = Undeltify(baseBytes, deltaBytes, targetLengthTuple.length);
-                    return extractFunc(new MemoryStream(undeltifiedData), length, false);
+                    return extractFunc(new MemoryStream(undeltifiedData), undeltifiedData.Length, false);
             }
             return default(T);
         }
@@ -191,7 +192,7 @@ namespace GitRead.Net
             return targetBuffer;
         }
 
-        private byte[] ReadZlibBytes(Stream stream, ulong length)
+        private byte[] ReadZlibBytes(Stream stream, long length)
         {
             byte[] result = new byte[length];
             using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
@@ -230,22 +231,9 @@ namespace GitRead.Net
             }
             counter++;
             return (counter, result);
-        }        
-
-        internal Commit ReadCommit(string hash)
-        {
-            string filePath = GetObjectFilePath(hash);
-            if (File.Exists(filePath))
-            {
-                return ReadCommitFromFile(filePath, hash);
-            }
-            else
-            {
-                return ReadObjectFromPack(hash, (Stream s, ulong _, bool useZlib) => ReadCommitFromStream(s, hash, useZlib));
-            }
         }
 
-        private T ReadObjectFromPack<T>(string hash, Func<Stream, ulong, bool, T> extractFunc)
+        private T ReadObjectFromPack<T>(string hash, Func<Stream, long, bool, T> extractFunc)
         {
             foreach(string indexFile in Directory.EnumerateFiles(Path.Combine(repoPath, "objects", "pack"), "*.idx"))
             {
@@ -260,6 +248,49 @@ namespace GitRead.Net
                 }
             }
             return default(T);
+        }
+        
+        private IReadOnlyList<TreeEntry> ReadTreeFromFile(string filePath, string hash)
+        {
+            List<TreeEntry> entries = new List<TreeEntry>();
+            using (FileStream fileStream = File.OpenRead(filePath))
+            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
+            {
+                string gitFileType = ReadString(deflateStream, whiteSpace);
+                if (gitFileType.ToString() != "tree")
+                {
+                    throw new Exception($"Object with hash {hash} is not a tree. It is a {gitFileType}.");
+                }
+                string gitFileSize = ReadString(deflateStream, nullChar);
+                int length = int.Parse(gitFileSize);
+                while (length > 0)
+                {
+                    string mode = ReadString(deflateStream, whiteSpace);
+                    string name = ReadString(deflateStream, nullChar);
+                    byte[] buffer = new byte[20];
+                    deflateStream.Read(buffer, 0, 20);
+                    string itemHash = String.Concat(buffer.Select(x => x.ToString("X2")));
+                    length -= (mode.Length + 1 + name.Length + 1 + itemHash.Length);
+                    entries.Add(new TreeEntry(name, itemHash, mode));
+                }
+            }
+            return entries;
+        }
+
+        private IReadOnlyList<TreeEntry> ReadTreeCore(Stream stream, int length)
+        {
+            List<TreeEntry> entries = new List<TreeEntry>();
+            while (length > 0)
+            {
+                string mode = ReadString(stream, whiteSpace);
+                string name = ReadString(stream, nullChar);
+                byte[] buffer = new byte[20];
+                stream.Read(buffer, 0, 20);
+                string itemHash = String.Concat(buffer.Select(x => x.ToString("X2")));
+                length -= (mode.Length + 1 + name.Length + 1 + 20);
+                entries.Add(new TreeEntry(name, itemHash, mode));
+            }
+            return entries;
         }
 
         private Commit ReadCommitFromFile(string filePath, string hash)
@@ -317,6 +348,21 @@ namespace GitRead.Net
             reader.ReadLine();
             string message = reader.ReadToEnd();
             return new Commit(hash, tree, parents, author, message);
+        }
+
+        private IReadOnlyList<TreeEntry> ReadTreeFromStream(Stream stream, long length, bool useZlib)
+        {
+            if (useZlib)
+            {
+                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+                {
+                    return ReadTreeCore(deflateStream, (int)length);
+                }
+            }
+            else
+            {
+                return ReadTreeCore(stream, (int)length);
+            }
         }
 
         private Commit ReadCommitFromStream(Stream stream, string hash, bool useZlib)

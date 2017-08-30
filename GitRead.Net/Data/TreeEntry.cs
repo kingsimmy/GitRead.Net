@@ -16,5 +16,7 @@ namespace GitRead.Net.Data
         public string Hash { get; }
 
         public TreeEntryMode Mode { get; }
+
+        public override string ToString() => $"{Name} {Hash} {Mode}";
     }
 }
