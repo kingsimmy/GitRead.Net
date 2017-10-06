@@ -1,5 +1,6 @@
 ﻿using GitRead.Net.Data;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 
 namespace GitRead.Net.Test
@@ -74,6 +75,10 @@ namespace GitRead.Net.Test
             Commit res = reader.ReadCommit(hash);
             Assert.AreEqual(res.Message, "Add design notes\n");
             Assert.AreEqual(res.Tree, "1af7239766b45f2c85f422a99867919ca9e1e935");
+            Assert.AreEqual(res.Author, "Mads Torgersen");
+            Assert.AreEqual(res.EmailAddress, "mads.torgersen@microsoft.com");
+            Assert.AreEqual(res.Timestamp, new DateTime(2017,8,9,0,17,9));
+            Assert.AreEqual(res.TimeZoneOffset, "-0700");
         }
 
         [Test]

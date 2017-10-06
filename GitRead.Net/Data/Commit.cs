@@ -19,8 +19,8 @@ namespace GitRead.Net.Data
             {
                 throw new Exception($"Author string in commit {hash} could not be parsed");
             }
-            Author = authorMatch.Groups[1].Value;
-            EmailAddress = authorMatch.Groups[2].Value;            
+            Author = authorMatch.Groups[1].Value.Trim();
+            EmailAddress = authorMatch.Groups[2].Value;
             Timestamp = DateTimeOffset.FromUnixTimeSeconds(long.Parse(authorMatch.Groups[3].Value)).UtcDateTime;
             TimeZoneOffset = authorMatch.Groups[4].Value;
         }
