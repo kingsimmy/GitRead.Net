@@ -87,11 +87,14 @@ namespace GitRead.Net.Test
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryReader reader = new RepositoryReader(repoDir);
             string hash = "1af7239766b45f2c85f422a99867919ca9e1e935";
-            var res = reader.ReadTree(hash);
+            IReadOnlyList<TreeEntry> res = reader.ReadTree(hash);
             Assert.AreEqual(res.Count, 6);
             Assert.AreEqual(res[0].Hash, "176A458F94E0EA5272CE67C36BF30B6BE9CAF623");
             Assert.AreEqual(res[0].Mode, TreeEntryMode.RegularNonExecutableFile);
             Assert.AreEqual(res[0].Name, ".gitattributes");
+            Assert.AreEqual(res[3].Hash, "B00C0CD41F02E6CD62C292B00F25E26A3AC7E64F");
+            Assert.AreEqual(res[3].Mode, TreeEntryMode.Directory);
+            Assert.AreEqual(res[3].Name, "meetings");
         }
 
     }

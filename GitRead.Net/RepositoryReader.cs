@@ -263,18 +263,8 @@ namespace GitRead.Net
                 }
                 string gitFileSize = ReadString(deflateStream, nullChar);
                 int length = int.Parse(gitFileSize);
-                while (length > 0)
-                {
-                    string mode = ReadString(deflateStream, whiteSpace);
-                    string name = ReadString(deflateStream, nullChar);
-                    byte[] buffer = new byte[20];
-                    deflateStream.Read(buffer, 0, 20);
-                    string itemHash = String.Concat(buffer.Select(x => x.ToString("X2")));
-                    length -= (mode.Length + 1 + name.Length + 1 + itemHash.Length);
-                    entries.Add(new TreeEntry(name, itemHash, mode));
-                }
+                return ReadTreeCore(deflateStream, length);
             }
-            return entries;
         }
 
         private IReadOnlyList<TreeEntry> ReadTreeCore(Stream stream, int length)
