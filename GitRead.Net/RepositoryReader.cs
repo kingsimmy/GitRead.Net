@@ -83,7 +83,7 @@ namespace GitRead.Net
             }
             else
             {
-                return ReadObjectFromPack(hash, (Stream s, long length, bool useZlib) => ReadTreeFromStream(s, length, useZlib));
+                return ReadObjectFromPack(hash, ReadTreeFromStream);
             }
         }
         
@@ -132,7 +132,7 @@ namespace GitRead.Net
                     deltaDataLength -= targetLengthTuple.bytesRead;
                     byte[] deltaBytes = new byte[deltaDataLength];
                     deflateStream.Read(deltaBytes, 0, deltaDataLength);
-                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, (Stream f, long l, bool _) => ReadZlibBytes(f, l));
+                    byte[] baseBytes = ReadPackFile(fileStream, null, offset - baseObjOffset, ReadBytes);
                     if (baseBytes.Length != sourceDataTuple.length)
                     {
                         throw new Exception("Base object did not match expected length");
@@ -192,13 +192,18 @@ namespace GitRead.Net
             return targetBuffer;
         }
 
-        private byte[] ReadZlibBytes(Stream stream, long length)
+        private byte[] ReadBytes(Stream stream, long length, bool useZlib)
         {
             byte[] result = new byte[length];
-            using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+            if (useZlib)
             {
-                deflateStream.Read(result, 0, (int)length);
+                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+                {
+                    deflateStream.Read(result, 0, (int)length);
+                }
+                return result;
             }
+            stream.Read(result, 0, (int)length);
             return result;
         }
 

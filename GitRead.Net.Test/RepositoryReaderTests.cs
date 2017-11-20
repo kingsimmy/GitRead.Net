@@ -97,5 +97,14 @@ namespace GitRead.Net.Test
             Assert.AreEqual(res[3].Name, "meetings");
         }
 
+        [Test]
+        public void TestCsharplangReadTreeDelta()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryReader reader = new RepositoryReader(repoDir);
+            string hash = "ba2a7c63986f13c2f554c32353a9a69ff6292106";
+            IReadOnlyList<TreeEntry> res = reader.ReadTree(hash);
+            Assert.AreEqual(res.Count, 31);
+        }
     }
 }
