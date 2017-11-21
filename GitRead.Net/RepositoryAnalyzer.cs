@@ -23,13 +23,18 @@ namespace GitRead.Net
         {
             string head = repositoryReader.ReadHead();
             string commitHash = repositoryReader.ReadBranch(head);
-            Commit current = repositoryReader.ReadCommit(commitHash);
+            return GetFilePaths(commitHash);
+        }
+
+        public IEnumerable<string> GetFilePaths(string commitHash)
+        {
+            Commit commit = repositoryReader.ReadCommit(commitHash);
             Queue<(string, string)> treeHashes = new Queue<(string, string)>();
-            treeHashes.Enqueue((current.Tree, string.Empty));
-            while(treeHashes.Count > 0)
+            treeHashes.Enqueue((commit.Tree, string.Empty));
+            while (treeHashes.Count > 0)
             {
                 (string hash, string folder) = treeHashes.Dequeue();
-                foreach(TreeEntry treeEntry in repositoryReader.ReadTree(hash))
+                foreach (TreeEntry treeEntry in repositoryReader.ReadTree(hash))
                 {
                     switch (treeEntry.Mode)
                     {
@@ -64,7 +69,7 @@ namespace GitRead.Net
                     }
                     Commit current = repositoryReader.ReadCommit(hash);
                     yield return current;
-                    readCommits.Add(hash);                    
+                    readCommits.Add(hash);
                     toReadCommits.AddRange(current.Parents);
                 }
             }
