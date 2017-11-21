@@ -10,9 +10,8 @@ namespace GitRead.Net
 {
     public class RepositoryReader
     {
-        private const int whiteSpace = ' ';
-        private const int nullChar = '\0';
-        private readonly byte[] oneByteBuffer = new byte[1];
+        private const char whiteSpace = ' ';
+        private const char nullChar = '\0';
         private readonly string repoPath;
         private readonly PackIndexReader indexReader;
 
@@ -302,7 +301,7 @@ namespace GitRead.Net
                 }
                 if (gitFileType.ToString() != "commit")
                 {
-                    throw new Exception("Invalid commit object");
+                    throw new Exception($"Object with hash {hash} is not a commit object. It is a {gitFileType}.");
                 }
                 StringBuilder gitFileSize = new StringBuilder();
                 while ((ch = reader.Read()) != nullChar)
@@ -386,12 +385,12 @@ namespace GitRead.Net
             return Path.Combine(repoPath, "objects", folderName, fileName);
         }
 
-        private string ReadString(Stream stream, int delimiter)
+        private string ReadString(Stream stream, char delimiter)
         {
+            byte[] oneByteBuffer = new byte[1];
             StringBuilder builder = new StringBuilder();
-            char ch = char.MaxValue;
             stream.Read(oneByteBuffer, 0, 1);
-            ch = Encoding.UTF8.GetChars(oneByteBuffer)[0];
+            char ch = Encoding.UTF8.GetChars(oneByteBuffer)[0];
             while (ch != delimiter)
             {
                 builder.Append(ch);
