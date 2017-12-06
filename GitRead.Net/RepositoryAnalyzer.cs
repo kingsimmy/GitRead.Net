@@ -58,11 +58,11 @@ namespace GitRead.Net
                 string head = repositoryReader.ReadHead();
                 string commitHash = repositoryReader.ReadBranch(head);
                 HashSet<string> readCommits = new HashSet<string>();
-                List<string> toReadCommits = new List<string>() { commitHash };
+                Queue<string> toReadCommits = new Queue<string>();
+                toReadCommits.Enqueue(commitHash);
                 while (toReadCommits.Count > 0)
                 {
-                    string hash = toReadCommits.First();
-                    toReadCommits.RemoveAt(0);
+                    string hash = toReadCommits.Dequeue();
                     if (readCommits.Contains(hash))
                     {
                         continue;
@@ -70,7 +70,10 @@ namespace GitRead.Net
                     Commit current = repositoryReader.ReadCommit(hash);
                     yield return current;
                     readCommits.Add(hash);
-                    toReadCommits.AddRange(current.Parents);
+                    foreach(string parentHash in current.Parents)
+                    {
+                        toReadCommits.Enqueue(parentHash);
+                    }
                 }
             }
         }
