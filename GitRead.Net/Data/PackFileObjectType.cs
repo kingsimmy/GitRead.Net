@@ -1,6 +1,6 @@
 ﻿namespace GitRead.Net.Data
 {
-    public enum PackFileObjectType : byte
+    internal enum PackFileObjectType : byte
     {
         Commit = 0b0000_0001,
         Tree = 0b0000_0010,
