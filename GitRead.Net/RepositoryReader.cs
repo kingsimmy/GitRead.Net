@@ -18,7 +18,7 @@ namespace GitRead.Net
         public RepositoryReader(string repoPath)
         {
             this.repoPath = repoPath.EndsWith(".git") ? repoPath : Path.Combine(repoPath, ".git");
-            indexReader = new PackIndexReader(repoPath);
+            indexReader = new PackIndexReader(this.repoPath);
         }
 
         public string ReadHead()
