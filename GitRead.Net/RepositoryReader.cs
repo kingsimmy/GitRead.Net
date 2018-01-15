@@ -312,7 +312,7 @@ namespace GitRead.Net
             }
         }
 
-        private static Commit ReadCommitCore(StreamReader reader, string hash)
+        private Commit ReadCommitCore(StreamReader reader, string hash)
         {
             string treeLine = reader.ReadLine();
             if (!treeLine.StartsWith("tree"))
