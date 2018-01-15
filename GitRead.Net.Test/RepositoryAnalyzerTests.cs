@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using GitRead.Net.Data;
 using NUnit.Framework;
 
 namespace GitRead.Net.Test
@@ -28,7 +29,6 @@ namespace GitRead.Net.Test
             Assert.True(filePaths.Contains(@"proposals\rejected\README.md"));
         }
 
-
         [Test]
         public void TestGetFilePathsSpecificCommit()
         {
@@ -42,6 +42,19 @@ namespace GitRead.Net.Test
             Assert.True(filePaths.Contains(@"proposals\async-streams.md"));
             Assert.True(filePaths.Contains(@"proposals\nullable-reference-types.md"));
             Assert.True(filePaths.Contains(@"spec\spec.md"));
+        }
+
+        [Test]
+        public void TestGetChangesByCommit()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            CommitDelta changes = repositoryAnalyzer.GetChanges("7981ea1fb4d89571fd41e3b75f7c9f7fc178e837");
+            Assert.AreEqual(2, changes.Added.Count);
+            Assert.AreEqual(0, changes.Deleted.Count);
+            Assert.AreEqual(0, changes.Modified.Count);
+            Assert.True(changes.Added.Contains(@"proposals\nullable-reference-types.md"));
+            Assert.True(changes.Added.Contains(@"design-notes\Notes-2016-11-16.md"));
         }
     }
 }

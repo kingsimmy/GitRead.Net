@@ -28,6 +28,41 @@ namespace GitRead.Net
 
         public IEnumerable<string> GetFilePaths(string commitHash)
         {
+            return GetPathAndHashForFiles(commitHash).Select(x => x.path);
+        }
+
+        public CommitDelta GetChanges(string commitHash)
+        {
+            Commit commit = repositoryReader.ReadCommit(commitHash);
+            string commitHashBefore = commit.Parents.First();
+            Dictionary<string, string> filePathToHashBefore = GetPathAndHashForFiles(commitHashBefore).ToDictionary(x => x.path, x => x.hash);
+            Dictionary<string, string> filePathToHashNow = GetPathAndHashForFiles(commitHash).ToDictionary(x => x.path, x => x.hash);
+            HashSet<string> allFilePaths = new HashSet<string>(Enumerable.Concat(filePathToHashBefore.Keys, filePathToHashNow.Keys));
+            List<string> added = new List<string>();
+            List<string> deleted = new List<string>();
+            List<string> modified = new List<string>();
+            foreach (string filePath in allFilePaths)
+            {
+                bool existedInCommitBefore = filePathToHashBefore.TryGetValue(filePath, out string hashBefore);
+                bool existedInCommitNow = filePathToHashNow.TryGetValue(filePath, out string hashNow);
+                if (existedInCommitBefore && existedInCommitNow && hashBefore != hashNow)
+                {
+                    modified.Add(filePath);
+                }
+                else if (existedInCommitBefore && !existedInCommitNow)
+                {
+                    deleted.Add(filePath);
+                }
+                else if (!existedInCommitBefore && existedInCommitNow)
+                {
+                    added.Add(filePath);
+                }
+            }
+            return new CommitDelta(added, deleted, modified);
+        }
+
+        private IEnumerable<(string path, string hash)> GetPathAndHashForFiles(string commitHash)
+        {
             Commit commit = repositoryReader.ReadCommit(commitHash);
             Queue<(string, string)> treeHashes = new Queue<(string, string)>();
             treeHashes.Enqueue((commit.Tree, string.Empty));
@@ -44,7 +79,7 @@ namespace GitRead.Net
                         case TreeEntryMode.RegularExecutableFile:
                         case TreeEntryMode.RegularNonExecutableFile:
                         case TreeEntryMode.RegularNonExecutableGroupWriteableFile:
-                            yield return folder + treeEntry.Name;
+                            yield return (folder + treeEntry.Name, treeEntry.Hash);
                             break;
                     }
                 }
