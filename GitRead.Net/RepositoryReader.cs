@@ -49,6 +49,10 @@ namespace GitRead.Net
 
         internal string ReadBlob(string hash)
         {
+            if (!File.Exists(GetObjectFilePath(hash)))
+            {
+                return ReadObjectFromPack(hash, (Stream s, long _, bool useZlib) => ReadBlobFromStream(s, useZlib));
+            }
             using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
             using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
             using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
@@ -356,6 +360,25 @@ namespace GitRead.Net
             else
             {
                 return ReadTreeCore(stream, (int)length);
+            }
+        }
+
+        private string ReadBlobFromStream(Stream stream, bool useZlib)
+        {
+            if (useZlib)
+            {
+                using (DeflateStream deflateStream = GetDeflateStreamForZlibData(stream))
+                using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+            else
+            {
+                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    return reader.ReadToEnd();
+                }
             }
         }
 

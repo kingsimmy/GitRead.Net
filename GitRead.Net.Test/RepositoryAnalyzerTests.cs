@@ -56,5 +56,20 @@ namespace GitRead.Net.Test
             Assert.True(changes.Added.Contains(@"proposals\nullable-reference-types.md"));
             Assert.True(changes.Added.Contains(@"design-notes\Notes-2016-11-16.md"));
         }
+
+        [Test]
+        public void TestGetFileLineCounts()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            Dictionary<string, int> lineCounts = repositoryAnalyzer.GetFileLineCounts("7981ea1fb4d89571fd41e3b75f7c9f7fc178e837").ToDictionary(x => x.FilePath, x => x.LineCount);
+            Assert.AreEqual(6, lineCounts.Count);
+            Assert.AreEqual(10, lineCounts.GetValueOrDefault(@"README.md", -1));
+            Assert.AreEqual(0, lineCounts.GetValueOrDefault(@"proposals\async-streams.md",-1));
+            Assert.AreEqual(126, lineCounts.GetValueOrDefault(@"proposals\nullable-reference-types.md", -1));
+            Assert.AreEqual(74, lineCounts.GetValueOrDefault(@"design-notes\Notes-2016-11-16.md", -1));
+            Assert.AreEqual(0, lineCounts.GetValueOrDefault(@"design-notes\csharp-language-design-notes-2017.md", -1));
+            Assert.AreEqual(0, lineCounts.GetValueOrDefault(@"spec\spec.md", -1));
+        }
     }
 }

@@ -31,6 +31,23 @@ namespace GitRead.Net
             return GetPathAndHashForFiles(commitHash).Select(x => x.path);
         }
 
+        public IEnumerable<FileLineCount> GetFileLineCounts()
+        {
+            string head = repositoryReader.ReadHead();
+            string commitHash = repositoryReader.ReadBranch(head);
+            return GetFileLineCounts(commitHash);
+        }
+
+        public IEnumerable<FileLineCount> GetFileLineCounts(string commitHash)
+        {
+            int GetCount(string hash)
+            {
+                string content = repositoryReader.ReadBlob(hash);
+                return content.Length == 0 ? 0 : content.Count(c => c == '\n') + 1;
+            }
+            return GetPathAndHashForFiles(commitHash).Select(x => new FileLineCount(x.path, x.mode == TreeEntryMode.RegularExecutableFile ? 0 : GetCount(x.hash)));
+        }
+
         public CommitDelta GetChanges(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
@@ -61,7 +78,7 @@ namespace GitRead.Net
             return new CommitDelta(added, deleted, modified);
         }
 
-        private IEnumerable<(string path, string hash)> GetPathAndHashForFiles(string commitHash)
+        private IEnumerable<(string path, string hash, TreeEntryMode mode)> GetPathAndHashForFiles(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
             Queue<(string, string)> treeHashes = new Queue<(string, string)>();
@@ -79,7 +96,7 @@ namespace GitRead.Net
                         case TreeEntryMode.RegularExecutableFile:
                         case TreeEntryMode.RegularNonExecutableFile:
                         case TreeEntryMode.RegularNonExecutableGroupWriteableFile:
-                            yield return (folder + treeEntry.Name, treeEntry.Hash);
+                            yield return (folder + treeEntry.Name, treeEntry.Hash, treeEntry.Mode);
                             break;
                     }
                 }
