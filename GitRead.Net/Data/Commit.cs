@@ -29,7 +29,7 @@ namespace GitRead.Net.Data
 
         public string Tree { get; }
 
-        public IReadOnlyCollection<string> Parents { get; }
+        public IReadOnlyList<string> Parents { get; }
 
         public string Author { get; }
 

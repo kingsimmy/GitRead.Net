@@ -45,7 +45,7 @@ namespace GitRead.Net.Test
         }
 
         [Test]
-        public void TestGetChangesByCommit()
+        public void TestGetChangesByCommitOneParent()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
@@ -55,6 +55,29 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, changes.Modified.Count);
             Assert.True(changes.Added.Contains(@"proposals\nullable-reference-types.md"));
             Assert.True(changes.Added.Contains(@"design-notes\Notes-2016-11-16.md"));
+        }
+
+        [Test]
+        public void TestGetChangesByCommitTwoParentsNoChange()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            CommitDelta changes = repositoryAnalyzer.GetChanges("dfb46ac110aacfade7a4a9491b272e6e8ffc4468");
+            Assert.AreEqual(0, changes.Added.Count);
+            Assert.AreEqual(0, changes.Deleted.Count);
+            Assert.AreEqual(0, changes.Modified.Count);
+        }
+        
+        [Test]
+        public void TestGetChangesByCommitTwoParentsWithChange()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("vcpkg.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            CommitDelta changes = repositoryAnalyzer.GetChanges("dbab03a1a82913ae96bfa3c1613ade20b5ac438d");
+            Assert.AreEqual(0, changes.Added.Count);
+            Assert.AreEqual(0, changes.Deleted.Count);
+            Assert.AreEqual(1, changes.Modified.Count);
+            Assert.True(changes.Modified.Contains(@"ports\openssl\portfile.cmake"));
         }
 
         [Test]

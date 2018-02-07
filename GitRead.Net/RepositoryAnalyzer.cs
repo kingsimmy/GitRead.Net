@@ -51,26 +51,57 @@ namespace GitRead.Net
         public CommitDelta GetChanges(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
-            string commitHashBefore = commit.Parents.First();
-            Dictionary<string, string> filePathToHashBefore = GetPathAndHashForFiles(commitHashBefore).ToDictionary(x => x.path, x => x.hash);
-            Dictionary<string, string> filePathToHashNow = GetPathAndHashForFiles(commitHash).ToDictionary(x => x.path, x => x.hash);
-            HashSet<string> allFilePaths = new HashSet<string>(Enumerable.Concat(filePathToHashBefore.Keys, filePathToHashNow.Keys));
             List<string> added = new List<string>();
             List<string> deleted = new List<string>();
             List<string> modified = new List<string>();
+            if (commit.Parents.Count == 0 || commit.Parents.Count > 2)
+            {
+                return new CommitDelta(added, deleted, modified);
+            }
+            string commitHashParent1 = commit.Parents[0];
+            Dictionary<string, string> filePathToHashParent1 = GetPathAndHashForFiles(commitHashParent1).ToDictionary(x => x.path, x => x.hash);
+            Dictionary<string, string> filePathToHashParent2 = null;
+            if (commit.Parents.Count > 1)
+            {
+                string commitHashParent2 = commit.Parents[1];
+                filePathToHashParent2 = GetPathAndHashForFiles(commitHashParent2).ToDictionary(x => x.path, x => x.hash);
+            }
+            
+            Dictionary<string, string> filePathToHashNow = GetPathAndHashForFiles(commitHash).ToDictionary(x => x.path, x => x.hash);
+            HashSet<string> allFilePaths = new HashSet<string>(Enumerable.Concat(filePathToHashNow.Keys, filePathToHashParent1.Keys));
+            if(filePathToHashParent2 != null)
+            {
+                allFilePaths.UnionWith(filePathToHashParent2.Keys);
+            }
             foreach (string filePath in allFilePaths)
             {
-                bool existedInCommitBefore = filePathToHashBefore.TryGetValue(filePath, out string hashBefore);
                 bool existedInCommitNow = filePathToHashNow.TryGetValue(filePath, out string hashNow);
-                if (existedInCommitBefore && existedInCommitNow && hashBefore != hashNow)
+                bool existedInCommitBefore1 = filePathToHashParent1.TryGetValue(filePath, out string hashBefore1);                
+                if (filePathToHashParent2 != null)
+                {
+                    bool existedInCommitBefore2 = filePathToHashParent2.TryGetValue(filePath, out string hashBefore2);
+                    if ((existedInCommitBefore1 && existedInCommitNow && hashBefore1 != hashNow) && (existedInCommitBefore2 && existedInCommitNow && hashBefore2 != hashNow))
+                    {
+                        modified.Add(filePath);
+                    }
+                    else if ((existedInCommitBefore1 || existedInCommitBefore2) && !existedInCommitNow)
+                    {
+                        deleted.Add(filePath);
+                    }
+                    else if (!existedInCommitBefore1 && !existedInCommitBefore2 && existedInCommitNow)
+                    {
+                        added.Add(filePath);
+                    }
+                }
+                else if(existedInCommitBefore1 && existedInCommitNow && hashBefore1 != hashNow)
                 {
                     modified.Add(filePath);
                 }
-                else if (existedInCommitBefore && !existedInCommitNow)
+                else if (existedInCommitBefore1 && !existedInCommitNow)
                 {
                     deleted.Add(filePath);
                 }
-                else if (!existedInCommitBefore && existedInCommitNow)
+                else if (!existedInCommitBefore1 && existedInCommitNow)
                 {
                     added.Add(filePath);
                 }
