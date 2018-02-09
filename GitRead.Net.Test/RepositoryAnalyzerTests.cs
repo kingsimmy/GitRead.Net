@@ -45,7 +45,7 @@ namespace GitRead.Net.Test
         }
 
         [Test]
-        public void TestGetChangesByCommitOneParent()
+        public void TestGetChangesByCommitOneParentFilesAdded()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
@@ -53,8 +53,24 @@ namespace GitRead.Net.Test
             Assert.AreEqual(2, changes.Added.Count);
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(0, changes.Modified.Count);
-            Assert.True(changes.Added.Contains(@"proposals\nullable-reference-types.md"));
-            Assert.True(changes.Added.Contains(@"design-notes\Notes-2016-11-16.md"));
+            Assert.True(changes.Added.Select(x => x.Path).Contains(@"proposals\nullable-reference-types.md"));
+            Assert.True(changes.Added.Select(x => x.Path).Contains(@"design-notes\Notes-2016-11-16.md"));
+        }
+        
+
+        [Test]
+        public void TestGetChangesByCommitOneParentFilesModified()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            CommitDelta changes = repositoryAnalyzer.GetChanges("a5f82604eab5826bd1913cf63c7dfb8c2b187641");
+            Assert.AreEqual(0, changes.Added.Count);
+            Assert.AreEqual(0, changes.Deleted.Count);
+            Assert.AreEqual(2, changes.Modified.Count);
+            FileChange readmeChanges = changes.Modified.Where(x => x.Path == @"README.md").First();
+            Assert.AreEqual(16, readmeChanges.NumberOfLines);
+            FileChange proposalsReadmeChanges = changes.Modified.Where(x => x.Path == @"proposals\README.md").First();
+            Assert.AreEqual(2, proposalsReadmeChanges.NumberOfLines);
         }
 
         [Test]
@@ -77,7 +93,8 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, changes.Added.Count);
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(1, changes.Modified.Count);
-            Assert.True(changes.Modified.Contains(@"ports\openssl\portfile.cmake"));
+            FileChange portfileChanges = changes.Modified.Where(x => x.Path == @"ports\openssl\portfile.cmake").First();
+            Assert.AreEqual(1, portfileChanges.NumberOfLines);
         }
 
         [Test]

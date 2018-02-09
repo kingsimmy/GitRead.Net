@@ -4,17 +4,22 @@ namespace GitRead.Net.Data
 {
     public class CommitDelta
     {
-        public CommitDelta(List<string> added, List<string> deleted, List<string> modified)
+        public CommitDelta(List<FileChange> added, List<FileChange> deleted, List<FileChange> modified)
         {
             Added = added;
             Deleted = deleted;
             Modified = modified;
         }
 
-        public IReadOnlyList<string> Added { get; }
+        public IReadOnlyList<FileChange> Added { get; }
 
-        public IReadOnlyList<string> Deleted { get; }
+        public IReadOnlyList<FileChange> Deleted { get; }
 
-        public IReadOnlyList<string> Modified { get; }
+        public IReadOnlyList<FileChange> Modified { get; }
+
+        public override string ToString()
+        {
+            return $"Added: {Added.Count} Deleted: {Deleted.Count} Modified: {Modified.Count}";
+        }
     }
 }
