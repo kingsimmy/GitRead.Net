@@ -111,5 +111,14 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, lineCounts.GetValueOrDefault(@"design-notes\csharp-language-design-notes-2017.md", -1));
             Assert.AreEqual(0, lineCounts.GetValueOrDefault(@"spec\spec.md", -1));
         }
+
+        [Test]
+        public void TestGetCommitsForPath()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            List<Commit> commits = repositoryAnalyzer.GetCommitsForPath(@"proposals\lambda-attributes.md").ToList();
+            Assert.AreEqual(2, commits.Count);
+        }
     }
 }

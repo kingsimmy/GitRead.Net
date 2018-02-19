@@ -43,6 +43,48 @@ namespace GitRead.Net
             return GetPathAndHashForFiles(commitHash).Select(x => new FileLineCount(x.Path, GetLineCount(x.Hash, x.Mode)));
         }
 
+        public IEnumerable<Commit> GetCommitsForPath(string filePath)
+        {
+            List<string> contentHashes = new List<string>();
+            Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
+            foreach(Commit commit in Commits)
+            {
+                if(TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
+                {
+                    if (!earliestCommit.ContainsKey(contentHash))
+                    {
+                        contentHashes.Add(contentHash);
+                        earliestCommit[contentHash] = commit;
+                    }
+                    else if (earliestCommit[contentHash].Timestamp > commit.Timestamp)
+                    {
+                        earliestCommit[contentHash] = commit;
+                    }
+                }
+            }
+            foreach(string contentHash in contentHashes)
+            {
+                yield return earliestCommit[contentHash];
+            }
+        }
+
+        private bool TryGetContentHashForPath(string rootTreeHash, string filePath, out string contentHash)
+        {
+            string treeHash = rootTreeHash;
+            string[] segments = filePath.Split(Path.DirectorySeparatorChar);
+            foreach (string segment in segments.Take(segments.Length - 1))
+            {
+                treeHash = repositoryReader.ReadTree(treeHash).Where(x => x.Mode == TreeEntryMode.Directory && x.Name == segment).FirstOrDefault()?.Hash;
+                if (treeHash == null)
+                {
+                    contentHash = null;
+                    return false;
+                }
+            }
+            contentHash = repositoryReader.ReadTree(treeHash).Where(x => x.Name == segments[segments.Length - 1]).FirstOrDefault()?.Hash;
+            return contentHash != null;
+        }
+
         public CommitDelta GetChanges(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
