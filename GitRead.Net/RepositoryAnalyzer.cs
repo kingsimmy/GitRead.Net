@@ -204,18 +204,18 @@ namespace GitRead.Net
             string head = repositoryReader.ReadHead();
             string commitHash = repositoryReader.ReadBranch(head);
             Dictionary<string, int> inDegree = new Dictionary<string, int>() { { commitHash, 0 } };
-            HashSet<string> readCommits = new HashSet<string>();
+            Dictionary<string, Commit> readCommits = new Dictionary<string, Commit>();
             Queue<string> toReadCommits = new Queue<string>();
             toReadCommits.Enqueue(commitHash);
             while (toReadCommits.Count > 0)
             {
                 string hash = toReadCommits.Dequeue();
-                if (readCommits.Contains(hash))
+                if (readCommits.ContainsKey(hash))
                 {
                     continue;
                 }
                 Commit current = repositoryReader.ReadCommit(hash);
-                readCommits.Add(hash);
+                readCommits.Add(hash, current);
                 foreach (string parentHash in current.Parents)
                 {
                     toReadCommits.Enqueue(parentHash);
@@ -226,29 +226,16 @@ namespace GitRead.Net
                     inDegree[parentHash] = val + 1;
                 }
             }
-            readCommits = new HashSet<string>();
-            toReadCommits = new Queue<string>();
-            toReadCommits.Enqueue(commitHash);
-            while (toReadCommits.Count > 0)
+            while (inDegree.Count > 0)
             {
-                string hash = toReadCommits.Dequeue();
-                if (readCommits.Contains(hash))
-                {
-                    continue;
-                }
-                if (inDegree[hash] > 0)
-                {
-                    toReadCommits.Enqueue(hash);
-                    continue;
-                }
-                Commit current = repositoryReader.ReadCommit(hash);
-                yield return current;
-                readCommits.Add(hash);
+                Commit current = inDegree.Where(x => x.Value == 0).Select(x => readCommits[x.Key]).OrderBy(x => x.Timestamp).Last();
+                inDegree.Remove(current.Hash);
                 foreach (string parentHash in current.Parents)
                 {
                     inDegree[parentHash]--;
                     toReadCommits.Enqueue(parentHash);
                 }
+                yield return current;
             }
         }
 

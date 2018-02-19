@@ -28,6 +28,7 @@ namespace GitRead.Net.Test
             Assert.Less(commits.IndexOf("fc7e0f6d81c71944d68cd798bf1d85c9decbc59f"), commits.IndexOf("460058747f22757b61b8a4f5ad6beb1c2043eef4")); //4600 is a parent of fc7e
             Assert.Less(commits.IndexOf("c5de26f52019ca0e1e79d88584f75bfe530ee986"), commits.IndexOf("3524ad4e2bd13ce56def7a4e16986215dd051363")); //3524 is a parent of c5de
             Assert.Less(commits.IndexOf("c5de26f52019ca0e1e79d88584f75bfe530ee986"), commits.IndexOf("e23c9e0ebdcef2a5ceafa16ce7b652335edd5c41")); //e23c is a parent of c5de
+            Assert.Less(commits.IndexOf("a275da6616b2d66ae878d894940e79c5e96a3b84"), commits.IndexOf("564b51a481968cebc0c2a8b83e0da1bf652fc9db")); //both share parent but 564b has timetamp which is before timestamp of a275
             Assert.AreEqual("f23184baaccbd403436c6a705f4fc06f90df3086", commits[commits.Count - 1]); // f231 is the commit which started the repository
         }
 
