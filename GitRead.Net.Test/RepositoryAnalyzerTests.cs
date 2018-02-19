@@ -18,6 +18,20 @@ namespace GitRead.Net.Test
         }
 
         [Test]
+        public void TestGetCommits()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            List<string> commits = repositoryAnalyzer.GetCommits().Select(x => x.Hash).ToList();
+            Assert.Less(commits.IndexOf("f985e74e689d6857daca1141564dfbc6fd658b08"), commits.IndexOf("460058747f22757b61b8a4f5ad6beb1c2043eef4")); //4600 is a parent of f985
+            Assert.Less(commits.IndexOf("380631f0cc7dcc56fdd4af27d77cb0df01c1478c"), commits.IndexOf("460058747f22757b61b8a4f5ad6beb1c2043eef4")); //4600 is a parent of 3806
+            Assert.Less(commits.IndexOf("fc7e0f6d81c71944d68cd798bf1d85c9decbc59f"), commits.IndexOf("460058747f22757b61b8a4f5ad6beb1c2043eef4")); //4600 is a parent of fc7e
+            Assert.Less(commits.IndexOf("c5de26f52019ca0e1e79d88584f75bfe530ee986"), commits.IndexOf("3524ad4e2bd13ce56def7a4e16986215dd051363")); //3524 is a parent of c5de
+            Assert.Less(commits.IndexOf("c5de26f52019ca0e1e79d88584f75bfe530ee986"), commits.IndexOf("e23c9e0ebdcef2a5ceafa16ce7b652335edd5c41")); //e23c is a parent of c5de
+            Assert.AreEqual("f23184baaccbd403436c6a705f4fc06f90df3086", commits[commits.Count - 1]); // f231 is the commit which started the repository
+        }
+
+        [Test]
         public void TestGetFilePathsHead()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");

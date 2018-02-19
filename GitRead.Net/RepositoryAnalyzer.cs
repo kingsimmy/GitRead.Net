@@ -16,7 +16,7 @@ namespace GitRead.Net
 
         public int GetTotalNumberOfCommits()
         {
-            return Commits.Count();
+            return GetCommits().Count();
         }
 
         public IEnumerable<string> GetFilePaths()
@@ -47,7 +47,7 @@ namespace GitRead.Net
         {
             List<string> contentHashes = new List<string>();
             Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
-            foreach(Commit commit in Commits)
+            foreach(Commit commit in GetCommits())
             {
                 if(TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
                 {
@@ -194,29 +194,60 @@ namespace GitRead.Net
             }
         }
 
-        public IEnumerable<Commit> Commits
+        /// <summary>
+        /// Yields commits starting with the head commit followed by its parents and then the parents of those commits until 
+        /// the last commit yielded is the original commit created in the repository.
+        /// This method implements a topological sorting which ensures that the the parent of a commit 'x' will never be before 'x'.
+        /// </summary>
+        public IEnumerable<Commit> GetCommits()
         {
-            get
+            string head = repositoryReader.ReadHead();
+            string commitHash = repositoryReader.ReadBranch(head);
+            Dictionary<string, int> inDegree = new Dictionary<string, int>() { { commitHash, 0 } };
+            HashSet<string> readCommits = new HashSet<string>();
+            Queue<string> toReadCommits = new Queue<string>();
+            toReadCommits.Enqueue(commitHash);
+            while (toReadCommits.Count > 0)
             {
-                string head = repositoryReader.ReadHead();
-                string commitHash = repositoryReader.ReadBranch(head);
-                HashSet<string> readCommits = new HashSet<string>();
-                Queue<string> toReadCommits = new Queue<string>();
-                toReadCommits.Enqueue(commitHash);
-                while (toReadCommits.Count > 0)
+                string hash = toReadCommits.Dequeue();
+                if (readCommits.Contains(hash))
                 {
-                    string hash = toReadCommits.Dequeue();
-                    if (readCommits.Contains(hash))
+                    continue;
+                }
+                Commit current = repositoryReader.ReadCommit(hash);
+                readCommits.Add(hash);
+                foreach (string parentHash in current.Parents)
+                {
+                    toReadCommits.Enqueue(parentHash);
+                    if (!inDegree.TryGetValue(parentHash, out int val))
                     {
-                        continue;
+                        val = 0;
                     }
-                    Commit current = repositoryReader.ReadCommit(hash);
-                    yield return current;
-                    readCommits.Add(hash);
-                    foreach(string parentHash in current.Parents)
-                    {
-                        toReadCommits.Enqueue(parentHash);
-                    }
+                    inDegree[parentHash] = val + 1;
+                }
+            }
+            readCommits = new HashSet<string>();
+            toReadCommits = new Queue<string>();
+            toReadCommits.Enqueue(commitHash);
+            while (toReadCommits.Count > 0)
+            {
+                string hash = toReadCommits.Dequeue();
+                if (readCommits.Contains(hash))
+                {
+                    continue;
+                }
+                if (inDegree[hash] > 0)
+                {
+                    toReadCommits.Enqueue(hash);
+                    continue;
+                }
+                Commit current = repositoryReader.ReadCommit(hash);
+                yield return current;
+                readCommits.Add(hash);
+                foreach (string parentHash in current.Parents)
+                {
+                    inDegree[parentHash]--;
+                    toReadCommits.Enqueue(parentHash);
                 }
             }
         }
