@@ -43,11 +43,18 @@ namespace GitRead.Net
             return GetPathAndHashForFiles(commitHash).Select(x => new FileLineCount(x.Path, GetLineCount(x.Hash, x.Mode)));
         }
 
-        public IEnumerable<Commit> GetCommitsForPath(string filePath)
+        public IReadOnlyList<Commit> GetCommitsForOneFilePath(string filePath)
+        {
+            string head = repositoryReader.ReadHead();
+            string commitHash = repositoryReader.ReadBranch(head);
+            return GetCommitsForOneFilePath(filePath, commitHash);
+        }
+
+        public IReadOnlyList<Commit> GetCommitsForOneFilePath(string filePath, string commitHash)
         {
             List<string> contentHashes = new List<string>();
             Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
-            foreach (Commit commit in GetCommits())
+            foreach (Commit commit in GetCommits(commitHash))
             {
                 if (TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
                 {
@@ -62,10 +69,45 @@ namespace GitRead.Net
                     }
                 }
             }
-            foreach (string contentHash in contentHashes)
+            return contentHashes.Select(x => earliestCommit[x]).ToList();
+        }
+
+        public IReadOnlyDictionary<string, IReadOnlyList<Commit>> GetCommitsForAllFilePaths()
+        {
+
+            string head = repositoryReader.ReadHead();
+            string commitHash = repositoryReader.ReadBranch(head);
+            return GetCommitsForAllFilePaths(commitHash);
+        }
+
+        public IReadOnlyDictionary<string, IReadOnlyList<Commit>> GetCommitsForAllFilePaths(string commitHash)
+        {
+            Dictionary<string, List<string>> contentHashesByPath = GetFilePaths(commitHash).ToDictionary(x => x, x=> new List<string>());
+            Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
+            foreach (Commit commit in GetCommits())
             {
-                yield return earliestCommit[contentHash];
+                foreach (string filePath in contentHashesByPath.Keys)
+                {
+                    if (TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
+                    {
+                        if (!earliestCommit.ContainsKey(contentHash))
+                        {
+                            contentHashesByPath[filePath].Add(contentHash);
+                            earliestCommit[contentHash] = commit;
+                        }
+                        else if (earliestCommit[contentHash].Timestamp > commit.Timestamp)
+                        {
+                            earliestCommit[contentHash] = commit;
+                        }
+                    }
+                }
             }
+            Dictionary<string, IReadOnlyList<Commit>> result = new Dictionary<string, IReadOnlyList<Commit>>();
+            foreach (string filePath in contentHashesByPath.Keys)
+            {
+                result[filePath] = contentHashesByPath[filePath].Select(x => earliestCommit[x]).ToList();
+            }
+            return result;
         }
 
         public CommitDelta GetChanges(string commitHash)

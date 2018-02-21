@@ -138,8 +138,19 @@ namespace GitRead.Net.Test
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
             RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
-            List<Commit> commits = repositoryAnalyzer.GetCommitsForPath(@"proposals\lambda-attributes.md").ToList();
+            IReadOnlyList<Commit> commits = repositoryAnalyzer.GetCommitsForOneFilePath(@"proposals\lambda-attributes.md");
             Assert.AreEqual(2, commits.Count);
+        }
+        
+        [Test]
+        public void TestGetCommitsForAllFilePaths()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            IReadOnlyDictionary<string, IReadOnlyList<Commit>> result = repositoryAnalyzer.GetCommitsForAllFilePaths();
+            Assert.AreEqual(152, result.Count);
+            Assert.AreEqual(1, result[@"spec\LICENSE.md"].Count);
+            Assert.AreEqual("6027ad5a4ab013f4fb42f5edd2d667d649fe1bd8", result[@"spec\LICENSE.md"][0].Hash);
         }
     }
 }
