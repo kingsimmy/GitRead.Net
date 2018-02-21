@@ -83,9 +83,11 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(2, changes.Modified.Count);
             FileChange readmeChanges = changes.Modified.Where(x => x.Path == @"README.md").First();
-            Assert.AreEqual(16, readmeChanges.NumberOfLines);
+            Assert.AreEqual(4, readmeChanges.NumberOfLinesDeleted);
+            Assert.AreEqual(12, readmeChanges.NumberOfLinesAdded);
             FileChange proposalsReadmeChanges = changes.Modified.Where(x => x.Path == @"proposals\README.md").First();
-            Assert.AreEqual(2, proposalsReadmeChanges.NumberOfLines);
+            Assert.AreEqual(1, proposalsReadmeChanges.NumberOfLinesAdded);
+            Assert.AreEqual(1, proposalsReadmeChanges.NumberOfLinesDeleted);
         }
 
         [Test]
@@ -109,7 +111,7 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(1, changes.Modified.Count);
             FileChange portfileChanges = changes.Modified.Where(x => x.Path == @"ports\openssl\portfile.cmake").First();
-            Assert.AreEqual(1, portfileChanges.NumberOfLines);
+            Assert.AreEqual(1, portfileChanges.NumberOfLinesDeleted);
         }
 
         [Test]

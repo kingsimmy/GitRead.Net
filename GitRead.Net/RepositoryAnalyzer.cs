@@ -109,15 +109,15 @@ namespace GitRead.Net
                             (linesAdded, linesDeleted) =
                                 DiffGenerator.GetLinesChanged(repositoryReader.ReadBlob(before1.Hash), repositoryReader.ReadBlob(before2.Hash), repositoryReader.ReadBlob(now.Hash));
                         }
-                        modified.Add(new FileChange(now.Path, linesAdded + linesDeleted));
+                        modified.Add(new FileChange(now.Path, linesAdded, linesDeleted));
                     }
                     else if ((existedInCommitBefore1 || existedInCommitBefore2) && !existedInCommitNow)
                     {
-                        deleted.Add(new FileChange(before1.Path, GetLineCount(before1.Hash, before1.Mode)));
+                        deleted.Add(new FileChange(before1.Path, 0, GetLineCount(before1.Hash, before1.Mode)));
                     }
                     else if (!existedInCommitBefore1 && !existedInCommitBefore2 && existedInCommitNow)
                     {
-                        added.Add(new FileChange(now.Path, GetLineCount(now.Hash, now.Mode)));
+                        added.Add(new FileChange(now.Path, GetLineCount(now.Hash, now.Mode), 0));
                     }
                 }
                 else if (existedInCommitBefore1 && existedInCommitNow && before1.Hash != now.Hash)
@@ -128,15 +128,15 @@ namespace GitRead.Net
                     {
                         (linesAdded, linesDeleted) = DiffGenerator.GetLinesChanged(repositoryReader.ReadBlob(before1.Hash), repositoryReader.ReadBlob(now.Hash));
                     }
-                    modified.Add(new FileChange(now.Path, linesAdded + linesDeleted));
+                    modified.Add(new FileChange(now.Path, linesAdded, linesDeleted));
                 }
                 else if (existedInCommitBefore1 && !existedInCommitNow)
                 {
-                    deleted.Add(new FileChange(before1.Path, GetLineCount(before1.Hash, before1.Mode)));
+                    deleted.Add(new FileChange(before1.Path, 0, GetLineCount(before1.Hash, before1.Mode)));
                 }
                 else if (!existedInCommitBefore1 && existedInCommitNow)
                 {
-                    added.Add(new FileChange(now.Path, GetLineCount(now.Hash, now.Mode)));
+                    added.Add(new FileChange(now.Path, GetLineCount(now.Hash, now.Mode), 0));
                 }
             }
             return new CommitDelta(added, deleted, modified);
