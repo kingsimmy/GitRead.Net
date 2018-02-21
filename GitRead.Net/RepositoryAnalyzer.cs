@@ -74,7 +74,6 @@ namespace GitRead.Net
 
         public IReadOnlyDictionary<string, IReadOnlyList<Commit>> GetCommitsForAllFilePaths()
         {
-
             string head = repositoryReader.ReadHead();
             string commitHash = repositoryReader.ReadBranch(head);
             return GetCommitsForAllFilePaths(commitHash);
@@ -84,11 +83,12 @@ namespace GitRead.Net
         {
             Dictionary<string, List<string>> contentHashesByPath = GetFilePaths(commitHash).ToDictionary(x => x, x=> new List<string>());
             Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
+            Dictionary<string, IReadOnlyList<TreeEntry>> treeCache = new Dictionary<string, IReadOnlyList<TreeEntry>>();
             foreach (Commit commit in GetCommits())
             {
                 foreach (string filePath in contentHashesByPath.Keys)
                 {
-                    if (TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
+                    if (TryGetContentHashForPath(commit.Tree, filePath, out string contentHash, treeCache))
                     {
                         if (!earliestCommit.ContainsKey(contentHash))
                         {
@@ -239,21 +239,35 @@ namespace GitRead.Net
             }
         }
 
-        private bool TryGetContentHashForPath(string rootTreeHash, string filePath, out string contentHash)
+        private bool TryGetContentHashForPath(string rootTreeHash, string filePath, out string contentHash, Dictionary<string, IReadOnlyList<TreeEntry>> treeCache = null)
         {
             string treeHash = rootTreeHash;
             string[] segments = filePath.Split(Path.DirectorySeparatorChar);
             foreach (string segment in segments.Take(segments.Length - 1))
             {
-                treeHash = repositoryReader.ReadTree(treeHash).Where(x => x.Mode == TreeEntryMode.Directory && x.Name == segment).FirstOrDefault()?.Hash;
+                treeHash = GetEntries(treeCache, treeHash).Where(x => x.Mode == TreeEntryMode.Directory && x.Name == segment).FirstOrDefault()?.Hash;
                 if (treeHash == null)
                 {
                     contentHash = null;
                     return false;
                 }
             }
-            contentHash = repositoryReader.ReadTree(treeHash).Where(x => x.Name == segments[segments.Length - 1]).FirstOrDefault()?.Hash;
+            contentHash = GetEntries(treeCache, treeHash).Where(x => x.Name == segments[segments.Length - 1]).FirstOrDefault()?.Hash;
             return contentHash != null;
+        }
+
+        private IReadOnlyList<TreeEntry> GetEntries(Dictionary<string, IReadOnlyList<TreeEntry>> treeCache, string treeHash)
+        {
+            if (treeCache == null)
+            {
+                return repositoryReader.ReadTree(treeHash);
+            }
+            if (!treeCache.TryGetValue(treeHash, out IReadOnlyList<TreeEntry> entries))
+            {
+                entries = repositoryReader.ReadTree(treeHash);
+                treeCache[treeHash] = entries;
+            }
+            return entries;
         }
 
         private int GetLineCount(string hash, TreeEntryMode mode)
