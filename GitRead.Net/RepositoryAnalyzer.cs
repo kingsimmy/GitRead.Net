@@ -47,9 +47,9 @@ namespace GitRead.Net
         {
             List<string> contentHashes = new List<string>();
             Dictionary<string, Commit> earliestCommit = new Dictionary<string, Commit>();
-            foreach(Commit commit in GetCommits())
+            foreach (Commit commit in GetCommits())
             {
-                if(TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
+                if (TryGetContentHashForPath(commit.Tree, filePath, out string contentHash))
                 {
                     if (!earliestCommit.ContainsKey(contentHash))
                     {
@@ -62,27 +62,10 @@ namespace GitRead.Net
                     }
                 }
             }
-            foreach(string contentHash in contentHashes)
+            foreach (string contentHash in contentHashes)
             {
                 yield return earliestCommit[contentHash];
             }
-        }
-
-        private bool TryGetContentHashForPath(string rootTreeHash, string filePath, out string contentHash)
-        {
-            string treeHash = rootTreeHash;
-            string[] segments = filePath.Split(Path.DirectorySeparatorChar);
-            foreach (string segment in segments.Take(segments.Length - 1))
-            {
-                treeHash = repositoryReader.ReadTree(treeHash).Where(x => x.Mode == TreeEntryMode.Directory && x.Name == segment).FirstOrDefault()?.Hash;
-                if (treeHash == null)
-                {
-                    contentHash = null;
-                    return false;
-                }
-            }
-            contentHash = repositoryReader.ReadTree(treeHash).Where(x => x.Name == segments[segments.Length - 1]).FirstOrDefault()?.Hash;
-            return contentHash != null;
         }
 
         public CommitDelta GetChanges(string commitHash)
@@ -103,17 +86,17 @@ namespace GitRead.Net
                 string commitHashParent2 = commit.Parents[1];
                 filePathToHashParent2 = GetPathAndHashForFiles(commitHashParent2).ToDictionary(x => x.Path);
             }
-            
+
             Dictionary<string, PathHashMode> filePathToHashNow = GetPathAndHashForFiles(commitHash).ToDictionary(x => x.Path);
             HashSet<string> allFilePaths = new HashSet<string>(Enumerable.Concat(filePathToHashNow.Keys, filePathToHashParent1.Keys));
-            if(filePathToHashParent2 != null)
+            if (filePathToHashParent2 != null)
             {
                 allFilePaths.UnionWith(filePathToHashParent2.Keys);
             }
             foreach (string filePath in allFilePaths)
             {
                 bool existedInCommitNow = filePathToHashNow.TryGetValue(filePath, out PathHashMode now);
-                bool existedInCommitBefore1 = filePathToHashParent1.TryGetValue(filePath, out PathHashMode before1);                
+                bool existedInCommitBefore1 = filePathToHashParent1.TryGetValue(filePath, out PathHashMode before1);
                 if (filePathToHashParent2 != null)
                 {
                     bool existedInCommitBefore2 = filePathToHashParent2.TryGetValue(filePath, out PathHashMode before2);
@@ -137,7 +120,7 @@ namespace GitRead.Net
                         added.Add(new FileChange(now.Path, GetLineCount(now.Hash, now.Mode)));
                     }
                 }
-                else if(existedInCommitBefore1 && existedInCommitNow && before1.Hash != now.Hash)
+                else if (existedInCommitBefore1 && existedInCommitNow && before1.Hash != now.Hash)
                 {
                     int linesAdded = 0;
                     int linesDeleted = 0;
@@ -157,41 +140,6 @@ namespace GitRead.Net
                 }
             }
             return new CommitDelta(added, deleted, modified);
-        }
-
-        private int GetLineCount(string hash, TreeEntryMode mode)
-        {
-            if (mode == TreeEntryMode.RegularExecutableFile)
-            {
-                return 0;
-            }
-            string content = repositoryReader.ReadBlob(hash);
-            return content.Length == 0 ? 0 : content.Count(c => c == '\n') + 1;
-        }
-
-        private IEnumerable<PathHashMode> GetPathAndHashForFiles(string commitHash)
-        {
-            Commit commit = repositoryReader.ReadCommit(commitHash);
-            Queue<(string, string)> treeHashes = new Queue<(string, string)>();
-            treeHashes.Enqueue((commit.Tree, string.Empty));
-            while (treeHashes.Count > 0)
-            {
-                (string hash, string folder) = treeHashes.Dequeue();
-                foreach (TreeEntry treeEntry in repositoryReader.ReadTree(hash))
-                {
-                    switch (treeEntry.Mode)
-                    {
-                        case TreeEntryMode.Directory:
-                            treeHashes.Enqueue((treeEntry.Hash, folder + treeEntry.Name + Path.DirectorySeparatorChar));
-                            break;
-                        case TreeEntryMode.RegularExecutableFile:
-                        case TreeEntryMode.RegularNonExecutableFile:
-                        case TreeEntryMode.RegularNonExecutableGroupWriteableFile:
-                            yield return new PathHashMode(folder + treeEntry.Name, treeEntry.Hash, treeEntry.Mode);
-                            break;
-                    }
-                }
-            }
         }
 
         /// <summary>
@@ -236,6 +184,58 @@ namespace GitRead.Net
                     toReadCommits.Enqueue(parentHash);
                 }
                 yield return current;
+            }
+        }
+
+        private bool TryGetContentHashForPath(string rootTreeHash, string filePath, out string contentHash)
+        {
+            string treeHash = rootTreeHash;
+            string[] segments = filePath.Split(Path.DirectorySeparatorChar);
+            foreach (string segment in segments.Take(segments.Length - 1))
+            {
+                treeHash = repositoryReader.ReadTree(treeHash).Where(x => x.Mode == TreeEntryMode.Directory && x.Name == segment).FirstOrDefault()?.Hash;
+                if (treeHash == null)
+                {
+                    contentHash = null;
+                    return false;
+                }
+            }
+            contentHash = repositoryReader.ReadTree(treeHash).Where(x => x.Name == segments[segments.Length - 1]).FirstOrDefault()?.Hash;
+            return contentHash != null;
+        }
+
+        private int GetLineCount(string hash, TreeEntryMode mode)
+        {
+            if (mode == TreeEntryMode.RegularExecutableFile)
+            {
+                return 0;
+            }
+            string content = repositoryReader.ReadBlob(hash);
+            return content.Length == 0 ? 0 : content.Count(c => c == '\n') + 1;
+        }
+
+        private IEnumerable<PathHashMode> GetPathAndHashForFiles(string commitHash)
+        {
+            Commit commit = repositoryReader.ReadCommit(commitHash);
+            Queue<(string, string)> treeHashes = new Queue<(string, string)>();
+            treeHashes.Enqueue((commit.Tree, string.Empty));
+            while (treeHashes.Count > 0)
+            {
+                (string hash, string folder) = treeHashes.Dequeue();
+                foreach (TreeEntry treeEntry in repositoryReader.ReadTree(hash))
+                {
+                    switch (treeEntry.Mode)
+                    {
+                        case TreeEntryMode.Directory:
+                            treeHashes.Enqueue((treeEntry.Hash, folder + treeEntry.Name + Path.DirectorySeparatorChar));
+                            break;
+                        case TreeEntryMode.RegularExecutableFile:
+                        case TreeEntryMode.RegularNonExecutableFile:
+                        case TreeEntryMode.RegularNonExecutableGroupWriteableFile:
+                            yield return new PathHashMode(folder + treeEntry.Name, treeEntry.Hash, treeEntry.Mode);
+                            break;
+                    }
+                }
             }
         }
 
