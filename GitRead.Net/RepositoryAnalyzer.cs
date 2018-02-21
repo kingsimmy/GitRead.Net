@@ -151,6 +151,16 @@ namespace GitRead.Net
         {
             string head = repositoryReader.ReadHead();
             string commitHash = repositoryReader.ReadBranch(head);
+            return GetCommits(commitHash);
+        }
+
+        /// <summary>
+        /// Yields commits starting with the specified commit followed by its parents and then the parents of those commits until 
+        /// the last commit yielded is the original commit created in the repository.
+        /// This method implements a topological sorting which ensures that the the parent of a commit 'x' will never be before 'x'.
+        /// </summary>
+        public IEnumerable<Commit> GetCommits(string commitHash)
+        {
             Dictionary<string, int> inDegree = new Dictionary<string, int>() { { commitHash, 0 } };
             Dictionary<string, Commit> readCommits = new Dictionary<string, Commit>();
             Queue<string> toReadCommits = new Queue<string>();
