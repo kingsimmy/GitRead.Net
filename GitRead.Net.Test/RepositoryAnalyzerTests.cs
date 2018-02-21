@@ -68,10 +68,13 @@ namespace GitRead.Net.Test
             Assert.AreEqual(2, changes.Added.Count);
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(0, changes.Modified.Count);
-            Assert.True(changes.Added.Select(x => x.Path).Contains(@"proposals\nullable-reference-types.md"));
-            Assert.True(changes.Added.Select(x => x.Path).Contains(@"design-notes\Notes-2016-11-16.md"));
+            FileChange nullableChanges = changes.Added.Where(x => x.Path == @"proposals\nullable-reference-types.md").First();
+            Assert.AreEqual(0, nullableChanges.NumberOfLinesDeleted);
+            Assert.AreEqual(126, nullableChanges.NumberOfLinesAdded);
+            FileChange notesChanges = changes.Added.Where(x => x.Path == @"design-notes\Notes-2016-11-16.md").First();
+            Assert.AreEqual(0, notesChanges.NumberOfLinesDeleted);
+            Assert.AreEqual(74, notesChanges.NumberOfLinesAdded);
         }
-        
 
         [Test]
         public void TestGetChangesByCommitOneParentFilesModified()
@@ -112,6 +115,7 @@ namespace GitRead.Net.Test
             Assert.AreEqual(1, changes.Modified.Count);
             FileChange portfileChanges = changes.Modified.Where(x => x.Path == @"ports\openssl\portfile.cmake").First();
             Assert.AreEqual(1, portfileChanges.NumberOfLinesDeleted);
+            Assert.AreEqual(0, portfileChanges.NumberOfLinesAdded);
         }
 
         [Test]
