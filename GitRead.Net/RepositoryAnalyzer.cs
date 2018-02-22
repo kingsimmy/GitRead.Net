@@ -43,6 +43,10 @@ namespace GitRead.Net
             return GetPathAndHashForFiles(commitHash).Select(x => new FileLineCount(x.Path, GetLineCount(x.Hash, x.Mode)));
         }
 
+        /// <summary>
+        /// Returns commits which modified the specified file ordered by most recent change through to the commit which created the file.
+        /// </summary>
+        /// <param name="filePath">The path to the file which you want to see the commit history of</param>
         public IReadOnlyList<Commit> GetCommitsForOneFilePath(string filePath)
         {
             string head = repositoryReader.ReadHead();
@@ -50,6 +54,12 @@ namespace GitRead.Net
             return GetCommitsForOneFilePath(filePath, commitHash);
         }
 
+        /// <summary>
+        /// Returns commits which modified the specified file going back from the specified commit.
+        /// Results are ordered by most recent change through to the commit which created the file.
+        /// </summary>
+        /// <param name="filePath">The path to the file which you want to see the commit history of</param>
+        /// <param name="commitHash">The hash of the commit to start looking back from</param>
         public IReadOnlyList<Commit> GetCommitsForOneFilePath(string filePath, string commitHash)
         {
             List<string> contentHashes = new List<string>();

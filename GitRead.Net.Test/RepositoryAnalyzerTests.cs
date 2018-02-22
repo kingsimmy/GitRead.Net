@@ -140,6 +140,8 @@ namespace GitRead.Net.Test
             RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
             IReadOnlyList<Commit> commits = repositoryAnalyzer.GetCommitsForOneFilePath(@"proposals\lambda-attributes.md");
             Assert.AreEqual(2, commits.Count);
+            Assert.AreEqual("24b2ac25986949e39fbb258b39c38c5f134afa74", commits[0].Hash);
+            Assert.AreEqual("2531e639b6cc3cce1d632daf350f5e49cd000c62", commits[1].Hash);
         }
         
         [Test]
@@ -151,6 +153,11 @@ namespace GitRead.Net.Test
             Assert.AreEqual(152, result.Count);
             Assert.AreEqual(1, result[@"spec\LICENSE.md"].Count);
             Assert.AreEqual("6027ad5a4ab013f4fb42f5edd2d667d649fe1bd8", result[@"spec\LICENSE.md"][0].Hash);
+            Assert.AreEqual(4, result[@"proposals\records.md"].Count);
+            Assert.AreEqual("658e65403a9e14d9f614994d1fd6757d4fab9608", result[@"proposals\records.md"][0].Hash);
+            Assert.AreEqual("22f42429d2b5d391db632ef0cc2444844118f108", result[@"proposals\records.md"][1].Hash);
+            Assert.AreEqual("9d957f97b19645397c97340cd996e73b952b30b1", result[@"proposals\records.md"][2].Hash);
+            Assert.AreEqual("fab2157f7e13c8f12a781172d9b870f846a442b9", result[@"proposals\records.md"][3].Hash);
         }
     }
 }
