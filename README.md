@@ -1,5 +1,5 @@
 # GitRead.Net
-[![NuGet](https://img.shields.io/badge/nuget-v1.1.0-green.svg)](https://www.nuget.org/packages/GitRead.Net/1.1.0)
+[![NuGet](https://img.shields.io/badge/nuget-v1.2.0-green.svg)](https://www.nuget.org/packages/GitRead.Net/1.2.0)
 
 C# library for reading Git repository data
 
@@ -10,6 +10,7 @@ This is a C# library which can be used to explore the commits and files which ex
 | >= .NET Framework 4.6.1 | >= .NET Core 2.0 | >= .NET Core 2.0|
 | >= .NET Core 2.0        |                  |                 |
 
+The library is available via Nuget at https://www.nuget.org/packages/GitRead.Net
 
 Simple Example
 --------------------
