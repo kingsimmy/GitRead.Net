@@ -19,6 +19,9 @@ namespace GitRead.Net
             return GetCommits().Count();
         }
 
+        /// <summary>
+        /// Returns the filepath for every file which exists in the repository as of the head.
+        /// </summary>
         public IEnumerable<string> GetFilePaths()
         {
             string head = repositoryReader.ReadHead();
@@ -26,11 +29,18 @@ namespace GitRead.Net
             return GetFilePaths(commitHash);
         }
 
+        /// <summary>
+        /// Returns the filepath for every file which exists in the repository as of a specific commit.
+        /// </summary>
+        /// <param name="commitHash">The hash of the commit to run for</param>
         public IEnumerable<string> GetFilePaths(string commitHash)
         {
             return GetPathAndHashForFiles(commitHash).Select(x => x.Path);
         }
 
+        /// <summary>
+        /// For every file which exists as of the head this method returns the filepath along with the number of lines in the file.
+        /// </summary>
         public IEnumerable<FileLineCount> GetFileLineCounts()
         {
             string head = repositoryReader.ReadHead();
@@ -38,6 +48,10 @@ namespace GitRead.Net
             return GetFileLineCounts(commitHash);
         }
 
+        /// <summary>
+        /// For every file which exists as of a specific commit this method returns the filepath along with the number of lines in the file.
+        /// </summary>
+        /// <param name="commitHash">The hash of the commit to run for</param>
         public IEnumerable<FileLineCount> GetFileLineCounts(string commitHash)
         {
             return GetPathAndHashForFiles(commitHash).Select(x => new FileLineCount(x.Path, GetLineCount(x.Hash, x.Mode)));
@@ -82,6 +96,9 @@ namespace GitRead.Net
             return contentHashes.Select(x => earliestCommit[x]).ToList();
         }
 
+        /// <summary>
+        /// Provides a list of commits which modified a file ordered by most recent for every file which exists as of the head.
+        /// </summary>
         public IReadOnlyDictionary<string, IReadOnlyList<Commit>> GetCommitsForAllFilePaths()
         {
             string head = repositoryReader.ReadHead();
@@ -89,6 +106,10 @@ namespace GitRead.Net
             return GetCommitsForAllFilePaths(commitHash);
         }
 
+        /// <summary>
+        /// Provides a list of commits which modified a file ordered by most recent for every file which exists as of a specific commit.
+        /// </summary>
+        /// <param name="commitHash">The hash of the commit to run for</param>
         public IReadOnlyDictionary<string, IReadOnlyList<Commit>> GetCommitsForAllFilePaths(string commitHash)
         {
             Dictionary<string, List<string>> contentHashesByPath = GetFilePaths(commitHash).ToDictionary(x => x, x=> new List<string>());
@@ -120,6 +141,10 @@ namespace GitRead.Net
             return result;
         }
 
+        /// <summary>
+        /// For a specific commit this provides a list of files added, a list of files modified and a list of the files deleted by that commit.
+        /// </summary>
+        /// <param name="commitHash">The hash of the commit to run for</param>
         public CommitDelta GetChanges(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
