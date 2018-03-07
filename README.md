@@ -71,7 +71,7 @@ meetings\2017\README.md (42 lines added) (0 lines deleted)
 Getting the history of commits for a specific file 
 --------------------
 ```
-RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang");
+> RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang");
 > string filePath = @"spec\variables.md";
 > IReadOnlyList<Commit> commits = repositoryAnalyzer.GetCommitsForOneFilePath(filePath);
 > Console.WriteLine(commits.Count);
