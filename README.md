@@ -16,19 +16,19 @@ Simple Example
 --------------------
 ```
 > RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\Newtonsoft.Json\.git");
-> Commit commit = repositoryAnalyzer.Commits.First();
+> Commit commit = repositoryAnalyzer.GetCommits().Last();
 > Console.WriteLine(commit.Hash);
-a8245a5b9e63bdabfb9dcb90a6cff761cac3af58
+e65bc2becd3ded759b5d5ca42c7d28a631cfc06d
 > Console.WriteLine(commit.Author);
-Jon Hanna
+JamesNK
 > Console.WriteLine(commit.Timestamp);
-16/12/2017 19:25:43
+08/09/2007 08:59:38
 ```
 
 Getting line count of all files as they existed at a specific commit
 --------------------
 ```
-> RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang\.git");
+> RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang");
 > foreach(FileLineCount lineCount in repositoryAnalyzer.GetFileLineCounts("7981ea1fb4d89571fd41e3b75f7c9f7fc178e837"))
 . {
 .     Console.WriteLine(lineCount);
@@ -41,9 +41,10 @@ proposals\nullable-reference-types.md 126
 spec\spec.md 0
 ```
 
-Getting names of files added, modified or deleted by a specific commit
+Getting the details of files added, modified or deleted by a specific commit
 --------------------
 ```
+> RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang\.git");
 > CommitDelta changes = repositoryAnalyzer.GetChanges("ad9e5bca2e2b9240d21ee4cc3aa184610968e9fb");
 > Console.WriteLine(changes.Added.Count);
 2
@@ -57,7 +58,29 @@ Getting names of files added, modified or deleted by a specific commit
 . }
 meetings\2017\LDM-2017-06-13.md
 meetings\2017\LDM-2017-06-14.md
-> FileChange change = changes.Modified[0];
-> Console.WriteLine($"{change.Path} ({change.NumberOfLinesAdded} lines added) ({change.NumberOfLinesDeleted} lines deleted)");
+> foreach (FileChange change in changes.Modified)
+. {
+.     Console.WriteLine($"{change.Path} ({change.NumberOfLinesAdded} lines added) ({change.NumberOfLinesDeleted} lines deleted)");
+. }
 meetings\2017\LDM-2017-05-17.md (32 lines added) (28 lines deleted)
+meetings\2017\LDM-2017-05-26.md (18 lines added) (31 lines deleted)
+meetings\2017\LDM-2017-05-31.md (55 lines added) (36 lines deleted)
+meetings\2017\README.md (42 lines added) (0 lines deleted)
+```
+
+Getting the history of commits for a specific file 
+--------------------
+```
+RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\csharplang");
+> string filePath = @"spec\variables.md";
+> IReadOnlyList<Commit> commits = repositoryAnalyzer.GetCommitsForOneFilePath(filePath);
+> Console.WriteLine(commits.Count);
+3
+> foreach (Commit commit in commits)
+. {
+.     Console.WriteLine($"On {commit.Timestamp:yyyy-MM-dd} {filePath} was modified by {commit.Author}'s commit with hash {commit.Hash}.");
+. }
+On 2018-01-25 spec\variables.md was modified by stakx's commit with hash 7f39331672cf8edbda8867de004138e0f711c877.
+On 2017-10-13 spec\variables.md was modified by Maira Wenzel's commit with hash 868b881ca5c1f158a91d81f3f73fdb1b729c97bd.
+On 2017-02-01 spec\variables.md was modified by Neal Gafter's commit with hash 6027ad5a4ab013f4fb42f5edd2d667d649fe1bd8.
 ```
