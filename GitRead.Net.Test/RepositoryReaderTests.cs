@@ -67,6 +67,16 @@ namespace GitRead.Net.Test
         }
 
         [Test]
+        public void TestCsharplangReadIndexLast()
+        {
+            //This test ensures the edge case of getting the offset for the last hash in the index works.
+            string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");
+            PackIndexReader reader = new PackIndexReader(repoDir);
+            long packFileOffset = reader.ReadIndex("pack-dae4b1886286da035b337f24ab5b707ad18d8a3c", "FFE711AA1535AF6FF434CBBCC50E1D3B1B9FDA82");
+            Assert.AreEqual(300872, packFileOffset);
+        }
+
+        [Test]
         public void TestCsharplangReadPackfile()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");

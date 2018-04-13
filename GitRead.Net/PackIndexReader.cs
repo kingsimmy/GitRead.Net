@@ -108,7 +108,7 @@ namespace GitRead.Net
         {
             byte[] buffer = new byte[20];
             int startOfHashes = 4 + 4 + (256 * 4);
-            int toCheck = (startIndex + endIndex + 1) / 2;
+            int toCheck = startIndex + 1 == endIndex ? startIndex : (startIndex + endIndex + 1) / 2;
             fileStream.Seek(startOfHashes + (toCheck * 20), SeekOrigin.Begin);
             fileStream.Read(buffer, 0, 20);
             string readHash = String.Concat(buffer.Select(x => x.ToString("X2")));
