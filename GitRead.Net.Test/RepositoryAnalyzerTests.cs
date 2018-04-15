@@ -118,6 +118,19 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, portfileChanges.NumberOfLinesAdded);
         }
 
+
+        [Test]
+        public void TestGetChangesNewlineAddedToEndOfFile()
+        {
+            string repoDir = TestUtils.ExtractZippedRepo("html-generator.git");
+            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(repoDir);
+            CommitDelta changes = repositoryAnalyzer.GetChanges("54a1f0028d595e73ea3151459cb7f9e58ec46b0b");
+            FileChange portfileChanges = changes.Modified.Where(x => x.Path == @"src\src\HtmlGenerator\Tag.cs").First();
+            Assert.AreEqual(1, portfileChanges.NumberOfLinesDeleted);
+            Assert.AreEqual(2, portfileChanges.NumberOfLinesAdded);
+        }
+
+
         [Test]
         public void TestGetFileLineCounts()
         {

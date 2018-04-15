@@ -7,9 +7,9 @@ namespace GitRead.Net
     {
         internal static (int added, int deleted) GetLinesChanged(string contentBefore, string contentNow)
         {
-            Dictionary<int, List<string>> allLines1 = contentBefore.Split('\n').GroupBy(x => x.GetHashCode())
+            Dictionary<int, List<string>> allLines1 = Split(contentBefore).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
-            Dictionary<int, List<string>> allLines2 = contentNow.Split('\n').GroupBy(x => x.GetHashCode())
+            Dictionary<int, List<string>> allLines2 = Split(contentNow).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
             int added = 0;
             int deleted = 0;
@@ -122,6 +122,24 @@ namespace GitRead.Net
                 }
             }
             return (added, deleted);
+        }
+
+        private static IEnumerable<string> Split(string input)
+        {
+            char[] chars = input.ToCharArray();
+            int start = 0;
+            for (int i = 0; i < chars.Length; i++)
+            {
+                if(chars[i] == '\n')
+                {
+                    yield return new string(chars, start, i - start + 1);
+                    start = i + 1;
+                }
+            }
+            if(start < chars.Length)
+            {
+                yield return new string(chars, start, chars.Length - start);
+            }
         }
     }
 }

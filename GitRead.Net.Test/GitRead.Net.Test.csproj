@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <None Remove="Repos\csharplang.git.zip" />
+    <None Remove="Repos\html-generator.git.zip" />
     <None Remove="Repos\TestRepo01.zip" />
     <None Remove="Repos\TestRepo02.zip" />
     <None Remove="Repos\vcpkg.git.zip" />
@@ -13,15 +14,16 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Repos\csharplang.git.zip" />
+    <EmbeddedResource Include="Repos\html-generator.git.zip" />
     <EmbeddedResource Include="Repos\TestRepo01.zip" />
     <EmbeddedResource Include="Repos\TestRepo02.zip" />
     <EmbeddedResource Include="Repos\vcpkg.git.zip" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.5.0" />
-    <PackageReference Include="NUnit" Version="3.9.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.9.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
+    <PackageReference Include="NUnit" Version="3.10.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
   </ItemGroup>
 
   <ItemGroup>
