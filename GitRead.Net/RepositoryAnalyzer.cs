@@ -315,7 +315,7 @@ namespace GitRead.Net
             return content.Length == 0 ? 0 : content.Count(c => c == '\n') + 1;
         }
 
-        private IEnumerable<PathHashMode> GetPathAndHashForFiles(string commitHash)
+        internal IEnumerable<PathHashMode> GetPathAndHashForFiles(string commitHash)
         {
             Commit commit = repositoryReader.ReadCommit(commitHash);
             Queue<(string, string)> treeHashes = new Queue<(string, string)>();
@@ -340,7 +340,7 @@ namespace GitRead.Net
             }
         }
 
-        private class PathHashMode
+        internal class PathHashMode
         {
             public PathHashMode(string path, string hash, TreeEntryMode mode)
             {
