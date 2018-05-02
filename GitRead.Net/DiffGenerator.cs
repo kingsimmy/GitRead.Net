@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace GitRead.Net
@@ -9,10 +10,19 @@ namespace GitRead.Net
 
         internal static (int added, int deleted) GetLinesChanged(string contentBefore, string contentNow)
         {
-            int prefix = FindLengthOfCommonPrefix(contentBefore, contentNow);
-            Dictionary<int, List<string>> allLines1 = Split(contentBefore, prefix).GroupBy(x => x.GetHashCode())
+            int prefixLength = FindLengthOfCommonPrefix(contentBefore, contentNow);
+            int suffixLength = FindLengthOfCommonSuffix(contentBefore, contentNow);
+            if(prefixLength + suffixLength >= Math.Max(contentBefore.Length, contentNow.Length) && prefixLength < suffixLength)
+            {
+                prefixLength = 0;
+            }
+            else if (prefixLength + suffixLength >= Math.Max(contentBefore.Length, contentNow.Length) && suffixLength < prefixLength)
+            {
+                suffixLength = 0;
+            }
+            Dictionary<int, List<string>> allLines1 = Split(contentBefore, prefixLength, suffixLength).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
-            Dictionary<int, List<string>> allLines2 = Split(contentNow, prefix).GroupBy(x => x.GetHashCode())
+            Dictionary<int, List<string>> allLines2 = Split(contentNow, prefixLength, suffixLength).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
             int added = 0;
             int deleted = 0;
@@ -157,10 +167,29 @@ namespace GitRead.Net
             }
             return i + 1;
         }
-        
-        private static IEnumerable<string> Split(string input, int start)
+
+        private static int FindLengthOfCommonSuffix(string input1, string input2)
         {
-            for (int i = start; i < input.Length; i++)
+            int suffixLength = 1;
+            int i = 0;
+            while (i < input1.Length - 1 && i < input2.Length - 1)
+            {
+                i++;
+                if (input1[input1.Length - i] != input2[input2.Length - i])
+                {
+                    return suffixLength - 1;
+                }
+                if (input1[input1.Length - i] == '\n')
+                {
+                    suffixLength = i;
+                }
+            }
+            return i - 1;
+        }
+
+        private static IEnumerable<string> Split(string input, int start, int suffixLength)
+        {
+            for (int i = start; i < input.Length - suffixLength; i++)
             {
                 if(input[i] == '\n')
                 {
@@ -168,9 +197,9 @@ namespace GitRead.Net
                     start = i + 1;
                 }
             }
-            if(start < input.Length)
+            if(start < input.Length - suffixLength)
             {
-                yield return input.Substring(start, input.Length - start);
+                yield return input.Substring(start, input.Length - suffixLength - start);
             }
         }
     }
