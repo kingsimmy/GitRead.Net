@@ -5,11 +5,14 @@ namespace GitRead.Net
 {
     internal static class DiffGenerator
     {
+        private static readonly int BlankLineHash = "\n".GetHashCode();
+
         internal static (int added, int deleted) GetLinesChanged(string contentBefore, string contentNow)
         {
-            Dictionary<int, List<string>> allLines1 = Split(contentBefore).GroupBy(x => x.GetHashCode())
+            int prefix = FindLengthOfCommonPrefix(contentBefore, contentNow);
+            Dictionary<int, List<string>> allLines1 = Split(contentBefore, prefix).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
-            Dictionary<int, List<string>> allLines2 = Split(contentNow).GroupBy(x => x.GetHashCode())
+            Dictionary<int, List<string>> allLines2 = Split(contentNow, prefix).GroupBy(x => x.GetHashCode())
                 .ToDictionary(x => x.Key, x => x.ToList());
             int added = 0;
             int deleted = 0;
@@ -17,7 +20,19 @@ namespace GitRead.Net
             {
                 bool existed1 = allLines1.TryGetValue(hashCode, out List<string> lines1);
                 bool existed2 = allLines2.TryGetValue(hashCode, out List<string> lines2);
-                if (existed1 && existed2)
+                if (existed1 && existed2 && hashCode == BlankLineHash)
+                {
+                    int diff = lines1.Count - lines2.Count;
+                    if (diff > 0)
+                    {
+                        deleted += diff;
+                    }
+                    if(diff < 0)
+                    {
+                        added += (diff * -1);
+                    }
+                }
+                else if (existed1 && existed2)
                 {
                     List<string> lines2Copy = new List<string>(lines2);
                     foreach (string line in lines1)
@@ -124,21 +139,38 @@ namespace GitRead.Net
             return (added, deleted);
         }
 
-        private static IEnumerable<string> Split(string input)
+        private static int FindLengthOfCommonPrefix(string input1, string input2)
         {
-            char[] chars = input.ToCharArray();
-            int start = 0;
-            for (int i = 0; i < chars.Length; i++)
+            int lastNewlineIndex = -1;
+            int i = 0;
+            while(i < input1.Length && i < input2.Length)
             {
-                if(chars[i] == '\n')
+                if(input1[i] != input2[i])
                 {
-                    yield return new string(chars, start, i - start + 1);
+                    return lastNewlineIndex + 1;
+                }
+                if(input1[i] == '\n')
+                {
+                    lastNewlineIndex = i;
+                }
+                i++;
+            }
+            return i + 1;
+        }
+        
+        private static IEnumerable<string> Split(string input, int start)
+        {
+            for (int i = start; i < input.Length; i++)
+            {
+                if(input[i] == '\n')
+                {
+                    yield return input.Substring(start, i - start + 1);
                     start = i + 1;
                 }
             }
-            if(start < chars.Length)
+            if(start < input.Length)
             {
-                yield return new string(chars, start, chars.Length - start);
+                yield return input.Substring(start, input.Length - start);
             }
         }
     }
