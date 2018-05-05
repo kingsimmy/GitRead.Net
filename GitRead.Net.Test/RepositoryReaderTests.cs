@@ -49,14 +49,6 @@ namespace GitRead.Net.Test
         }
 
         [Test]
-        public void TestCsharplangReadPackedBlob()
-        {
-            RepositoryReader reader = new RepositoryReader(@"C:\src\Newtonsoft.Json");
-            string res = reader.ReadBlob("5A654F6D8881CA594EA5EB56CC273D0695F26B2D");
-            Assert.AreEqual(10, res.Length);
-        }
-
-        [Test]
         public void TestCsharplangReadPackedRef()
         {
             string repoDir = TestUtils.ExtractZippedRepo("csharplang.git");

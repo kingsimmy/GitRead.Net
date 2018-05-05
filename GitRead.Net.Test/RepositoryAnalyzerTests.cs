@@ -103,17 +103,7 @@ namespace GitRead.Net.Test
             Assert.AreEqual(0, changes.Deleted.Count);
             Assert.AreEqual(0, changes.Modified.Count);
         }
-
-        [Test]
-        public void TestGetChanges()
-        {
-            RepositoryAnalyzer repositoryAnalyzer = new RepositoryAnalyzer(@"C:\src\Newtonsoft.Json");
-            CommitDelta changes = repositoryAnalyzer.GetChanges("2368a8e1b19a65c97f660cdccd1a6345526ab204");
-            Assert.AreEqual(0, changes.Added.Count);
-            Assert.AreEqual(0, changes.Deleted.Count);
-            Assert.AreEqual(0, changes.Modified.Count);
-        }
-
+        
         [Test]
         public void TestGetChangesByCommitTwoParentsWithChange()
         {
