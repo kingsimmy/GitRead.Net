@@ -55,7 +55,7 @@ namespace GitRead.Net
             }
             using (FileStream fileStream = File.OpenRead(GetObjectFilePath(hash)))
             using (DeflateStream deflateStream = GetDeflateStreamForZlibData(fileStream))
-            using (StreamReader reader = new StreamReader(deflateStream, Encoding.UTF8))
+            using (StreamReader reader = new StreamReader(deflateStream, Encoding.GetEncoding("ISO-8859-1")))
             {
                 StringBuilder gitFileType = new StringBuilder();
                 int ch;
@@ -375,7 +375,7 @@ namespace GitRead.Net
             }
             else
             {
-                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+                using (StreamReader reader = new StreamReader(stream, Encoding.GetEncoding(1252)))
                 {
                     return reader.ReadToEnd();
                 }

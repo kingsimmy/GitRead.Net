@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System.Collections.Generic;
+using NUnit.Framework;
 
 namespace GitRead.Net.Test
 {
@@ -20,6 +21,15 @@ namespace GitRead.Net.Test
             (int added, int deleted) = DiffGenerator.GetLinesChanged(text1, text2);
             Assert.AreEqual(0, added);
             Assert.AreEqual(1, deleted);
+        }
+
+        [Test]
+        public void TestDiff01()
+        {
+            Dictionary<string, string> files = TestUtils.ExtractZippedFiles("Files01");
+            (int added, int deleted) = DiffGenerator.GetLinesChanged(files["JsonSerializerTest_4793c7b.cs"], files["JsonSerializerTest_2368a8e.cs"]);
+            Assert.AreEqual(23, added);
+            Assert.AreEqual(0, deleted);
         }
     }
 }

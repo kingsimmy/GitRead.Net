@@ -10,6 +10,14 @@ namespace GitRead.Net
 
         internal static (int added, int deleted) GetLinesChanged(string contentBefore, string contentNow)
         {
+            if(contentBefore.Length == 0)
+            {
+                return (Split(contentNow, 0, contentNow.Length).Count(), 0);
+            }
+            if(contentNow.Length == 0)
+            {
+                return (0, Split(contentBefore, 0, contentBefore.Length).Count());
+            }
             int prefixLength = FindLengthOfCommonPrefix(contentBefore, contentNow);
             int suffixLength = FindLengthOfCommonSuffix(contentBefore, contentNow);
             if(prefixLength + suffixLength >= Math.Max(contentBefore.Length, contentNow.Length) && prefixLength < suffixLength)
