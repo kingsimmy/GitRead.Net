@@ -175,6 +175,10 @@ namespace GitRead.Net
                             deltaIndex++;
                         }
                     }
+                    if (bytesToCopy == 0)
+                    {
+                        bytesToCopy = 0x10000;
+                    }
                     for (int i = 0; i < bytesToCopy; i++)
                     {
                         targetBuffer[targetIndex] = baseBytes[offset + i];
