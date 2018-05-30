@@ -1,5 +1,5 @@
 # GitRead.Net
-[![NuGet](https://img.shields.io/badge/nuget-v1.3.0-green.svg)](https://www.nuget.org/packages/GitRead.Net/1.3.0)
+[![NuGet](https://img.shields.io/badge/nuget-v1.5.0-green.svg)](https://www.nuget.org/packages/GitRead.Net/1.5.0)
 
 C# library for reading Git repository data
 
